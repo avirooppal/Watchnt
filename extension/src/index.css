@@ -1,0 +1,22 @@
+:root {
+  --bg-base: #0F1115;
+  --bg-surface: #1A1D24;
+  --text-main: #E5E7EB;
+  --text-muted: #9CA3AF;
+  --accent: #6366F1;
+  --border: #2A2D35;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  width: 400px;
+  min-height: 500px;
+}
+
+.app-container {
+  padding: 16px;
+}

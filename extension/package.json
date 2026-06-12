@@ -1,0 +1,14 @@
+{
+  "name": "extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../scripts/build-extension.js",
+    "watch": "node ../scripts/build-extension.js --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}

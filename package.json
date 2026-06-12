@@ -1,0 +1,14 @@
+{
+  "name": "watchnt",
+  "private": true,
+  "workspaces": [
+    "extension",
+    "server"
+  ],
+  "scripts": {
+    "pull-models": "bash scripts/pull-models.sh"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
