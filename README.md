@@ -2,6 +2,10 @@
 
 Watchn't automatically turns everything you watch, listen to, and discuss into organized notes, insights, action items, and searchable knowledge so you never have to manually take notes again.
 
+<img width="1892" height="855" alt="image" src="https://github.com/user-attachments/assets/d82fa907-2992-4f7a-bd80-8afb1a26620f" />
+
+
+
 ## Features
 
 - **Automated Knowledge Capture:** Click "Capture" on any supported platform (YouTube, Google Meet, Podcasts) to begin extracting insights.
