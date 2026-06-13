@@ -9,6 +9,8 @@ import { EmptyState } from './components/EmptyState.jsx';
 import api from '../storage/api.js';
 
 import { SetupView } from './components/SetupView.jsx';
+import { ChatView } from './components/ChatView.jsx';
+import { GraphView } from './components/GraphView.jsx';
 
 // Import our new premium styles
 import './index.css';
@@ -84,10 +86,22 @@ function App() {
               Library
             </button>
             <button 
+              onClick={() => setActiveTab('chat')}
+              className={`nav-tab ${activeTab === 'chat' ? 'active' : ''}`}
+            >
+              Chat
+            </button>
+            <button 
               onClick={() => setActiveTab('settings')}
               className={`nav-tab ${activeTab === 'settings' ? 'active' : ''}`}
             >
               Settings
+            </button>
+            <button 
+              onClick={() => setActiveTab('graph')}
+              className={`nav-tab ${activeTab === 'graph' ? 'active' : ''}`}
+            >
+              Graph
             </button>
           </div>
           
@@ -114,6 +128,10 @@ function App() {
 
       {activeTab === 'settings' ? (
         <SetupView />
+      ) : activeTab === 'chat' ? (
+        <ChatView />
+      ) : activeTab === 'graph' ? (
+        <GraphView />
       ) : (
         <>
           <SearchBar value={search.query} onChange={search.setQuery} loading={search.loading} />

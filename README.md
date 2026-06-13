@@ -7,6 +7,11 @@ Watchn't automatically turns everything you watch, listen to, and discuss into o
 - **Automated Knowledge Capture:** Click "Capture" on any supported platform (YouTube, Google Meet, Podcasts) to begin extracting insights.
 - **AI-Powered Extraction:** Generates summaries, key insights, action items, and core concepts automatically using LLMs (Ollama, OpenRouter, Anthropic, Gemini).
 - **Semantic Search:** Uses vector embeddings (`pgvector`) to let you search your library by meaning and concept, not just exact keywords.
+- **Local RAG Chat:** Chat directly with your knowledge library using Retrieval-Augmented Generation to get instant answers from your past notes.
+- **Auto-Vault Sync:** Automatically exports and syncs your parsed markdown notes to your local Obsidian or Notion vaults.
+- **Local Audio Transcription:** Uses an integrated, offline Whisper.cpp container to automatically transcribe audio from any source.
+- **Visual Context Extraction:** Takes periodic screenshots while capturing to intelligently extract code blocks, presentation slides, and visual context using Local Vision (LLaVa).
+- **Knowledge Graph UI:** Explore your library through a beautiful, physics-based Force-Directed 2D graph that naturally clusters related concepts.
 - **Privacy First:** Designed to run 100% locally on your machine via Docker and Ollama.
 - **Export Ready:** Export your knowledge base as JSON or Markdown with one click.
 

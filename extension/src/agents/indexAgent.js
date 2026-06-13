@@ -1,5 +1,6 @@
 import { api } from '../storage/api.js';
 import { generateEmbedding } from '../storage/embeddings.js';
+import { getConfig } from '../storage/local.js';
 import logger from '../shared/logger.js';
 
 export async function runIndexAgent({ session, context, cards, category }) {
@@ -25,9 +26,12 @@ export async function runIndexAgent({ session, context, cards, category }) {
   }
   logger.log(`[IndexAgent] Generated embeddings for ${cards.length} cards`);
 
+  const config = await getConfig();
+
   const cardsRes = await api.post('/cards', {
     sourceId,
-    cards: cards
+    cards: cards,
+    vaultPath: config.vaultPath
   });
   
   logger.log(`[IndexAgent] Indexed cards successfully`);

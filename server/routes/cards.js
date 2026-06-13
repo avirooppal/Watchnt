@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { query, pool } from '../db.js';
 import pgvector from 'pgvector';
+import fs from 'fs/promises';
+import path from 'path';
 
 const cardsRoutes = new Hono();
 
@@ -9,7 +11,7 @@ cardsRoutes.post('/', async (c) => {
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
   try {
-    const { sourceId, cards } = await c.req.json();
+    const { sourceId, cards, vaultPath } = await c.req.json();
     if (!sourceId || !Array.isArray(cards)) {
       return c.json({ error: 'sourceId and cards array are required' }, 400);
     }
@@ -62,6 +64,44 @@ cardsRoutes.post('/', async (c) => {
       }
 
       await client.query('COMMIT');
+
+      // Write to Obsidian Vault if path is provided
+      if (vaultPath) {
+        try {
+          // Verify directory exists or try to create it
+          await fs.mkdir(vaultPath, { recursive: true });
+
+          for (const card of cards) {
+            // Create a safe filename
+            const safeTitle = card.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const filename = path.join(vaultPath, `${safeTitle}.md`);
+
+            const markdownContent = `---
+tags: [${(card.tags || []).join(', ')}]
+source: watchnt
+---
+
+# ${card.title}
+
+${card.summary}
+
+## Insights
+${(card.insights || []).map(i => `- ${i}`).join('\n')}
+
+## Action Items
+${(card.actions || []).map(a => `- [ ] ${a}`).join('\n')}
+
+## Concepts
+${(card.concepts || []).map(c => `- **${c}**`).join('\n')}
+`;
+            await fs.writeFile(filename, markdownContent, 'utf-8');
+          }
+        } catch (fsErr) {
+          console.error('Failed to write to vault path:', fsErr);
+          // We don't throw here because DB insert succeeded
+        }
+      }
+
       return c.json({ cardIds }, 201);
     } catch (e) {
       await client.query('ROLLBACK');

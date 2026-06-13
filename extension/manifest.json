@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Watchn't",
   "version": "0.1.0",
-  "permissions": ["storage", "tabs", "scripting", "tabCapture"],
+  "permissions": ["storage", "tabs", "scripting", "tabCapture", "activeTab"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://meet.google.com/*",

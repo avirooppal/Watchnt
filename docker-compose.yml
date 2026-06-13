@@ -51,15 +51,16 @@ services:
       timeout: 5s
       retries: 5
 
-  transcriber:
-    image: ollama/ollama
+  whisper-api:
+    image: onerahmet/openai-whisper-asr-webservice:latest
     restart: unless-stopped
     ports:
-      - "11434:11434"
-    volumes:
-      - ./data/ollama:/root/.ollama
+      - "9000:9000"
+    environment:
+      - ASR_MODEL=base
+      - ASR_ENGINE=openai_whisper
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "curl", "-f", "http://localhost:9000/docs"]
       interval: 10s
       timeout: 5s
       retries: 5

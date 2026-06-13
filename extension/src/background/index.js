@@ -1,8 +1,11 @@
 import { restoreSessions, createSession, appendChunks, getSession, setStatus, removeSession } from './session.js';
 import { enqueue, setJobHandler } from './queue.js';
 import { runPipeline } from './orchestrator.js';
+import { processVisionFrame } from '../agents/visionAgent.js';
 import { MESSAGE_TYPES, SESSION_STATUS } from '../shared/constants.js';
 import api from '../storage/api.js';
+
+const visionIntervals = new Map();
 
 setJobHandler(runPipeline);
 
@@ -59,6 +62,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       
       chrome.tabs.get(targetTabId, (tab) => {
         createSession(targetTabId, { platform: 'audio', title: tab.title, url: tab.url });
+
+        // Start vision capture loop
+        const intervalId = setInterval(async () => {
+          try {
+            const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'jpeg', quality: 50 });
+          if (dataUrl) {
+            const description = await processVisionFrame(dataUrl);
+            if (description) {
+               appendChunks(targetTabId, { text: description, timestamp: Date.now() });
+            }
+          }
+        } catch (e) {
+            console.warn('[Watchnt] Vision capture failed (tab might not be active or visible)', e);
+          }
+        }, 15000); // Every 15 seconds
+        
+        visionIntervals.set(targetTabId, intervalId);
       });
     });
   }
@@ -70,6 +90,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (window.__watchnt) window.__watchnt.stopAudioCapture();
       }
     });
+
+    if (visionIntervals.has(targetTabId)) {
+      clearInterval(visionIntervals.get(targetTabId));
+      visionIntervals.delete(targetTabId);
+    }
   }
   else if (message.type === 'INJECT_OVERLAY') {
     chrome.scripting.executeScript({

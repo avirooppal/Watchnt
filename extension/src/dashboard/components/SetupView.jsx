@@ -16,6 +16,7 @@ export function SetupView() {
   const [apiHost, setApiHost] = useState('http://localhost:3001');
   const [modelName, setModelName] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [vaultPath, setVaultPath] = useState('');
   const [status, setStatus] = useState('');
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function SetupView() {
       
       const defaultModel = c.modelName || DEFAULT_MODELS[c.llmProvider || 'anthropic'];
       setModelName(defaultModel);
+      if (c.vaultPath) setVaultPath(c.vaultPath);
       
       const p = c.llmProvider || 'anthropic';
       if (p === 'anthropic') setApiKey(c.anthropicKey || '');
@@ -59,7 +61,11 @@ export function SetupView() {
       return;
     }
 
-    const newConfig = { llmProvider: provider, modelName: modelName || DEFAULT_MODELS[provider] };
+    const newConfig = { 
+      llmProvider: provider, 
+      modelName: modelName || DEFAULT_MODELS[provider],
+      vaultPath: vaultPath.trim() 
+    };
     if (provider === 'anthropic') newConfig.anthropicKey = apiKey;
     if (provider === 'openai') newConfig.openaiKey = apiKey;
     if (provider === 'gemini') newConfig.geminiKey = apiKey;
@@ -177,7 +183,17 @@ export function SetupView() {
             />
           )}
         </div>
-
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '24px', marginTop: '8px' }}>
+          <label style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '500' }}>Obsidian Vault Path (Optional)</label>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '0 0 4px 0' }}>If provided, Watchn't will auto-sync beautifully formatted Markdown notes directly to this local folder on your computer.</p>
+          <input 
+            type="text" 
+            value={vaultPath}
+            onChange={e => setVaultPath(e.target.value)}
+            placeholder="e.g. C:\Users\name\Documents\Obsidian\Watchnt"
+            className="input-base"
+          />
+        </div>
         <button 
           type="submit" 
           className="btn-primary"

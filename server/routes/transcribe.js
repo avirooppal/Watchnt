@@ -10,10 +10,6 @@ transcribeRoutes.post('/', async (c) => {
   const userId = c.get('userId');
   if (!userId) return c.json({ error: 'Unauthorized' }, 401);
 
-  if (!process.env.OLLAMA_HOST) {
-    return c.json({ error: 'Transcription unavailable' }, 501);
-  }
-
   let tempFile = null;
 
   try {
@@ -32,28 +28,32 @@ transcribeRoutes.post('/', async (c) => {
     await fs.writeFile(tempFile, audioBuffer);
 
     try {
-      const response = await fetch(`${process.env.OLLAMA_HOST}/api/transcribe`, {
+      // Read the file from disk as a Blob for FormData
+      const fileBuffer = await fs.readFile(tempFile);
+      const audioBlob = new Blob([fileBuffer], { type: mimeType });
+      
+      const formData = new FormData();
+      formData.append('audio_file', audioBlob, `audio.webm`);
+
+      const whisperHost = 'http://whisper-api:9000';
+      const response = await fetch(`${whisperHost}/asr?task=transcribe&language=en&output=json`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'whisper',
-          path: tempFile // note: this expects the transcriber container to have access to this path, or for Ollama to ingest it correctly
-        })
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error(`Ollama responded with ${response.status}`);
+        throw new Error(`Whisper API responded with ${response.status}`);
       }
 
       const result = await response.json();
       
       return c.json({
-        transcript: result.transcript || result.text || '',
+        transcript: result.text || '',
         segments: result.segments || []
       }, 200);
 
     } catch (fetchErr) {
-      console.error('Ollama fetch error:', fetchErr);
+      console.error('Whisper fetch error:', fetchErr);
       return c.json({ error: 'Transcriber unavailable' }, 503);
     }
   } catch (err) {

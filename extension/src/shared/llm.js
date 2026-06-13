@@ -1,7 +1,7 @@
 import { getConfig } from '../storage/local.js';
 import api from '../storage/api.js';
 
-export async function callLLM({ system, user }) {
+export async function callLLM({ system, user, jsonMode = true }) {
   const config = await getConfig();
   const provider = config.llmProvider || 'anthropic';
   const anthropicKey = config.anthropicKey;
@@ -80,6 +80,8 @@ export async function callLLM({ system, user }) {
     const data = await response.json();
     rawText = data.choices[0].message.content;
   }
+
+  if (!jsonMode) return rawText;
 
   let stripped = rawText.trim();
   if (stripped.startsWith('```')) {

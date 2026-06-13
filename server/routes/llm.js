@@ -12,7 +12,7 @@ llmRoutes.post('/', async (c) => {
 
   try {
     const body = await c.req.json();
-    const { system, user, model } = body;
+    const { system, user, model, images } = body;
 
     const ollamaModel = model || process.env.OLLAMA_MODEL || 'llama3.1';
 
@@ -27,7 +27,7 @@ llmRoutes.post('/', async (c) => {
         model: ollamaModel,
         messages: [
           { role: 'system', content: system },
-          { role: 'user', content: user }
+          { role: 'user', content: user, images: images || [] }
         ],
         stream: false
       })
