@@ -10,11 +10,11 @@ llmRoutes.post('/', async (c) => {
     return c.json({ error: 'LLM proxy unavailable' }, 501);
   }
 
-  const ollamaModel = process.env.OLLAMA_MODEL || 'llama3.1';
-
   try {
     const body = await c.req.json();
-    const { system, user } = body;
+    const { system, user, model } = body;
+
+    const ollamaModel = model || process.env.OLLAMA_MODEL || 'llama3.1';
 
     if (!system || !user) {
       return c.json({ error: 'system and user are required' }, 400);

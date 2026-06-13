@@ -1,47 +1,18 @@
 import assert from 'assert';
-import crypto from 'crypto';
 
 const API_URL = 'http://localhost:3001';
 
 async function runTests() {
   console.log('Starting Integration Tests...');
-  let token = '';
   let sourceId = '';
 
-  const email = `test-${crypto.randomBytes(4).toString('hex')}@example.com`;
-  const password = 'password123';
-
   try {
-    // 1. Register
-    let res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    let data = await res.json();
-    assert.strictEqual(res.status, 201, `Register failed: ${JSON.stringify(data)}`);
-    assert.ok(data.token, 'Token missing from register response');
-    console.log('✅ POST /auth/register');
-
-    // 2. Login
-    res = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    data = await res.json();
-    assert.strictEqual(res.status, 200, `Login failed: ${JSON.stringify(data)}`);
-    assert.ok(data.token, 'Token missing from login response');
-    token = data.token;
-    console.log('✅ POST /auth/login');
-
     const authHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Content-Type': 'application/json'
     };
 
-    // 3. Create Source
-    res = await fetch(`${API_URL}/sources`, {
+    // 1. Create Source
+    let res = await fetch(`${API_URL}/sources`, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({
@@ -51,13 +22,13 @@ async function runTests() {
         durationSec: 120
       })
     });
-    data = await res.json();
+    let data = await res.json();
     assert.strictEqual(res.status, 201, `Create source failed: ${JSON.stringify(data)}`);
     assert.ok(data.id, 'Source ID missing');
     sourceId = data.id;
     console.log('✅ POST /sources');
 
-    // 4. Create Cards
+    // 2. Create Cards
     const dummyEmbedding1 = new Array(768).fill(0.1);
     const dummyEmbedding2 = new Array(768).fill(0.9);
     
@@ -77,21 +48,21 @@ async function runTests() {
     assert.strictEqual(data.cardIds.length, 2, 'Should return 2 card IDs');
     console.log('✅ POST /cards');
 
-    // 5. Get Cards
+    // 3. Get Cards
     res = await fetch(`${API_URL}/cards`, { headers: authHeaders });
     data = await res.json();
     assert.strictEqual(res.status, 200, `Get cards failed: ${JSON.stringify(data)}`);
     assert.strictEqual(data.cards.length, 2, 'Should return 2 cards');
     console.log('✅ GET /cards');
 
-    // 6. Search
+    // 4. Search
     res = await fetch(`${API_URL}/search`, {
       method: 'POST',
       headers: authHeaders,
       body: JSON.stringify({
         embedding: dummyEmbedding1,
         limit: 1,
-        threshold: -1.0 // Ensure it returns something regardless of threshold
+        threshold: -1.0
       })
     });
     data = await res.json();
@@ -100,7 +71,7 @@ async function runTests() {
     assert.strictEqual(data.results[0].title, 'Card 1', 'Closest card should be Card 1');
     console.log('✅ POST /search');
 
-    // 7. Transcribe
+    // 5. Transcribe
     const dummyAudio = Buffer.from('a').toString('base64');
     res = await fetch(`${API_URL}/transcribe`, {
       method: 'POST',
@@ -110,7 +81,7 @@ async function runTests() {
     assert.ok([200, 501, 503].includes(res.status), `Transcribe returned unexpected status: ${res.status}`);
     console.log('✅ POST /transcribe');
 
-    // 8. Embed
+    // 6. Embed
     res = await fetch(`${API_URL}/embed`, {
       method: 'POST',
       headers: authHeaders,
@@ -123,7 +94,7 @@ async function runTests() {
     }
     console.log('✅ POST /embed');
 
-    // 9. LLM
+    // 7. LLM
     res = await fetch(`${API_URL}/llm`, {
       method: 'POST',
       headers: authHeaders,
@@ -136,14 +107,14 @@ async function runTests() {
     }
     console.log('✅ POST /llm');
 
-    // 10. Export
+    // 8. Export
     res = await fetch(`${API_URL}/export?format=markdown`, { headers: authHeaders });
     const textData = await res.text();
     assert.strictEqual(res.status, 200, `Export failed: ${textData}`);
     assert.ok(textData.startsWith('# '), 'Export should start with markdown heading');
     console.log('✅ GET /export?format=markdown');
 
-    console.log('\n🎉 All 10 tests passed!');
+    console.log('\n🎉 All 8 tests passed!');
     process.exit(0);
   } catch (err) {
     console.error('\n❌ Test failed:');

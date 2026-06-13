@@ -17,7 +17,8 @@ const entryPoints = [
   { in: path.join(extDir, 'src/content/generic.js'), out: 'content/generic', format: 'iife' },
   { in: path.join(extDir, 'src/content/audio-capture.js'), out: 'content/audio-capture', format: 'iife' },
   { in: path.join(extDir, 'src/popup/popup.js'), out: 'popup/popup', format: 'iife' },
-  { in: path.join(extDir, 'src/sidepanel/App.jsx'), out: 'sidepanel/app', format: 'esm' }
+  { in: path.join(extDir, 'src/content/overlay.js'), out: 'content/overlay', format: 'iife' },
+  { in: path.join(extDir, 'src/dashboard/App.jsx'), out: 'dashboard/app', format: 'esm' }
 ];
 
 async function copyAssets() {
@@ -26,8 +27,8 @@ async function copyAssets() {
     { src: 'manifest.json', dest: 'dist/manifest.json' },
     { src: 'src/popup/index.html', dest: 'dist/popup/index.html' },
     { src: 'src/popup/popup.css', dest: 'dist/popup/popup.css' },
-    { src: 'src/sidepanel/index.html', dest: 'dist/sidepanel/index.html' },
-    { src: 'src/sidepanel/app.css', dest: 'dist/sidepanel/app.css' }
+    { src: 'src/dashboard/index.html', dest: 'dist/dashboard/index.html' },
+    { src: 'src/dashboard/app.css', dest: 'dist/dashboard/app.css' }
   ];
 
   for (const { src, dest } of assetsToCopy) {
@@ -47,13 +48,16 @@ async function build() {
       console.warn(`[Warning] Entry point not found, skipping for now: ${entry.in}`);
       continue;
     }
+    const isProd = process.env.NODE_ENV === 'production';
     const buildOptions = {
       entryPoints: [entry.in],
       outfile: path.join(distDir, `${entry.out}.js`),
       bundle: true,
       platform: 'browser',
       format: entry.format,
-      loader: { '.js': 'jsx', '.jsx': 'jsx' }
+      loader: { '.js': 'jsx', '.jsx': 'jsx' },
+      minify: isProd,
+      define: isProd ? { 'process.env.NODE_ENV': '"production"' } : {}
     };
     
     if (isWatch) {

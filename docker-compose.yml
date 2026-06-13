@@ -40,6 +40,17 @@ services:
       db:
         condition: service_healthy
 
+  transcript-service:
+    build: ./transcript-service
+    restart: unless-stopped
+    ports:
+      - "8005:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   transcriber:
     image: ollama/ollama
     restart: unless-stopped

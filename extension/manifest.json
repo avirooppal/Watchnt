@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Watchn't",
   "version": "0.1.0",
-  "permissions": ["storage", "tabs", "sidePanel", "scripting", "tabCapture"],
+  "permissions": ["storage", "tabs", "scripting", "tabCapture"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://meet.google.com/*",
@@ -17,11 +17,6 @@
     "type": "module"
   },
   "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/watch*"],
-      "js": ["content/bridge.js", "content/youtube.js"],
-      "run_at": "document_idle"
-    },
     {
       "matches": ["https://meet.google.com/*"],
       "js": ["content/bridge.js", "content/meet.js"],
@@ -40,9 +35,6 @@
   ],
   "action": {
     "default_popup": "popup/index.html"
-  },
-  "side_panel": {
-    "default_path": "sidepanel/index.html"
   },
   "icons": {
     "16": "assets/icon-16.png",

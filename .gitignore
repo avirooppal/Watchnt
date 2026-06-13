@@ -2,3 +2,13 @@ node_modules/
 dist/
 .env
 data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts and temp
+*.zip
+scratch.js
