@@ -1,126 +1,106 @@
-# Watchn't
+# Watchn't Copilot - Developer Documentation
 
 Watchn't automatically turns everything you watch, listen to, and discuss into organized notes, insights, action items, and searchable knowledge so you never have to manually take notes again.
 
-<img width="1892" height="855" alt="image" src="https://github.com/user-attachments/assets/d82fa907-2992-4f7a-bd80-8afb1a26620f" />
+## V2 Architecture
 
+Watchn't is built on a scalable, offline-capable V2 architecture utilizing the following components:
 
-
-## Features
-
-- **Automated Knowledge Capture:** Click "Capture" on any supported platform (YouTube, Google Meet, Podcasts) to begin extracting insights.
-- **AI-Powered Extraction:** Generates summaries, key insights, action items, and core concepts automatically using LLMs (Ollama, OpenRouter, Anthropic, Gemini).
-- **Semantic Search:** Uses vector embeddings (`pgvector`) to let you search your library by meaning and concept, not just exact keywords.
-- **Local RAG Chat:** Chat directly with your knowledge library using Retrieval-Augmented Generation to get instant answers from your past notes.
-- **Auto-Vault Sync:** Automatically exports and syncs your parsed markdown notes to your local Obsidian or Notion vaults.
-- **Local Audio Transcription:** Uses an integrated, offline Whisper.cpp container to automatically transcribe audio from any source.
-- **Visual Context Extraction:** Takes periodic screenshots while capturing to intelligently extract code blocks, presentation slides, and visual context using Local Vision (LLaVa).
-- **Knowledge Graph UI:** Explore your library through a beautiful, physics-based Force-Directed 2D graph that naturally clusters related concepts.
-- **Privacy First:** Designed to run 100% locally on your machine via Docker and Ollama.
-- **Export Ready:** Export your knowledge base as JSON or Markdown with one click.
-
-## Architecture
-
-Watchn't consists of three main components:
-
-1. **Browser Extension:** A React-based Chrome extension that injects an overlay into supported sites, captures DOM data/audio, and provides a dashboard library.
-2. **Node.js API:** A local backend that orchestrates the AI pipeline (summarization, extraction, indexing) and manages the PostgreSQL database.
-3. **Transcript Service:** A lightweight Python FastAPI service that fetches YouTube transcripts reliably.
+1. **Frontend Extension:** A React-based Manifest V3 Chrome extension that captures DOM data and local audio, featuring full offline resilience.
+2. **FastAPI Web Server:** The primary API gateway handling HTTP ingress and WebSocket events.
+3. **Celery AI Worker:** A robust background queue processing heavy ML workloads (transcription, diarization, LLM extraction).
+4. **Data Layer:** PostgreSQL with `pgvector` for semantic search, Redis for Celery brokering, and MinIO for audio blob storage.
 
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed on your machine:
+Ensure you have the following installed on your host machine:
 
-- **Node.js** (v18+)
-- **Docker & Docker Compose** (for running the database and local services)
-- **Ollama** (if you want to run local models)
-- **Google Chrome** or a Chromium-based browser
-
-## Local Development Setup
-
-### 1. Clone & Install Dependencies
-
-First, install the NPM dependencies for both the backend and the extension.
-
-```bash
-# Install backend dependencies
-cd server
-npm install
-
-# Install extension dependencies
-cd ../extension
-npm install
-```
-
-### 2. Environment Variables
-
-Create a `.env` file in the root directory (where `docker-compose.yml` is located). Watchn't requires the following environment variables:
-
-```env
-# Database Credentials
-POSTGRES_USER=watchnt
-POSTGRES_PASSWORD=your_secure_password
-POSTGRES_DB=watchnt
-
-# JWT and API Auth (For local usage)
-API_KEY=local_dev_key
-JWT_SECRET=super_secret_jwt_key
-
-# Local AI Configuration
-OLLAMA_HOST=http://host.docker.internal:11434
-OLLAMA_MODEL=llama3
-
-# Default LLM Provider (ollama, openrouter, anthropic, gemini)
-LLM_PROVIDER=ollama
-```
-
-### 3. Start the Docker Services
-
-Boot up the PostgreSQL database (with `pgvector`), the Node API, and the Python Transcript Service using Docker Compose:
-
-```bash
-docker compose up -d
-```
-
-_Note: Make sure your native port 5432 is free, or Docker will conflict with an existing PostgreSQL installation._
-
-### 4. Build the Extension
-
-The extension uses `esbuild` and React. Build the extension into the `dist/` folder:
-
-```bash
-cd extension
-npm run build
-```
-
-_(You can also use `npm run watch` to automatically rebuild the extension when you change React files)._
-
-### 5. Load the Extension into Chrome
-
-1. Open Google Chrome and navigate to `chrome://extensions/`
-2. Enable **"Developer mode"** in the top right corner.
-3. Click **"Load unpacked"** in the top left.
-4. Select the `extension/dist` folder located inside your Watchn't project directory.
+- **Node.js** (v18+) and **pnpm** (For the Frontend Monorepo)
+- **Python** (v3.11+) and **Poetry** (For the Backend API/Workers)
+- **Docker & Docker Compose** (For databases and ML containerization)
+- **Google Chrome** (For testing the extension)
 
 ---
 
-## Using Watchn't
+## Getting Started
 
-1. Open a YouTube video, a Google Meet call, or a podcast.
-2. You will see a small **Watchn't** overlay in the corner of the screen.
-3. Click **"Capture"** to start parsing the content.
-4. Open the Extension Dashboard (by clicking the Watchn't icon in your Chrome toolbar) to see your extracted knowledge cards, search your library, and configure your AI model settings.
+### 1. Build the Extension (Frontend)
 
-## Troubleshooting
+The frontend is managed as a Turborepo monorepo.
 
-- **"Ollama Unreachable" Error:** Ensure that your local Ollama app is running. Furthermore, ensure you have pulled the necessary embedding model by running:
-  ```bash
-  docker compose exec transcriber ollama pull nomic-embed-text
-  ```
-- **"Empty Library" after capturing:** The AI pipeline runs asynchronously in the background and takes 10-20 seconds to process a transcript. Try refreshing your dashboard.
-- **Search returns 500 Error:** Ensure your `pgvector` extension is properly loaded in PostgreSQL and that the embedding model successfully generated vectors.
+```bash
+# Install dependencies
+pnpm install
+
+# Build the extension for production
+pnpm --filter extension run build
+
+# Alternatively, run in watch mode for development
+pnpm --filter extension run dev
+```
+
+To load the extension into Chrome:
+1. Navigate to `chrome://extensions/`
+2. Enable "Developer mode" in the top right.
+3. Click "Load unpacked" and select the `apps/extension/dist` directory.
+
+### 2. Start the Backend Infrastructure (Docker)
+
+The entire backend (Postgres, Redis, MinIO, FastAPI, and Celery) has been containerized for local development.
+
+```bash
+# Start all services in the background
+make dev
+```
+
+The FastAPI Swagger UI will be available at: `http://localhost:8000/docs`
+
+### 3. Monitoring and Logging
+
+If you encounter errors in the ML pipeline or want to track the transcription process, you can tail the logs via the provided Makefile commands:
+
+```bash
+# Tail all container logs
+make dev-logs
+
+# Tail only the FastAPI web server
+make dev-logs-api
+
+# Tail only the Celery AI worker
+make dev-logs-worker
+```
+
+### 4. Stopping the Environment
+
+To gracefully shut down the development environment without losing database state:
+
+```bash
+make dev-stop
+```
+
+To completely destroy the environment and wipe all local databases and object storage:
+
+```bash
+make dev-clean
+```
+
+---
+
+## Directory Structure
+
+- `apps/`
+  - `extension/`: The React/Vite Manifest V3 Chrome Extension.
+  - `web/`: Next.js Web Dashboard (To be built).
+- `packages/`: Shared TS/JS monorepo configurations.
+- `server/`: The Python Backend.
+  - `app/api/`: FastAPI route handlers.
+  - `app/workers/`: Celery tasks for Audio Transcription and Speaker Diarization.
+  - `app/ai/`: Prompts and LLM interfaces via `litellm`.
+  - `app/services/`: Export generators (Markdown, PDF, JSON).
+
+---
 
 ## License
 

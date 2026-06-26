@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Watchn't AI Copilot",
+  "version": "2.0.0",
+  "description": "AI Meeting Copilot Companion",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "sidePanel",
+    "tabCapture"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Open Watchn't Copilot"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.js"]
+    }
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Open Watchn't Copilot"
+    },
+    "toggle-recording": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
+      },
+      "description": "Toggle Meeting Recording"
+    }
+  }
+}

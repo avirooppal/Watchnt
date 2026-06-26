@@ -1,19 +1,20 @@
 {
-  "name": "watchnt",
+  "name": "watchnt-monorepo",
+  "version": "2.0.0",
   "private": true,
-  "workspaces": [
-    "extension",
-    "server"
-  ],
   "scripts": {
-    "pull-models": "bash scripts/pull-models.sh",
-    "package": "node scripts/package-extension.js"
-  },
-  "dependencies": {
-    "esbuild": "^0.28.0"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "prepare": "husky install"
   },
   "devDependencies": {
-    "adm-zip": "^0.5.17",
-    "archiver": "^8.0.0"
-  }
+    "husky": "^8.0.3",
+    "prettier": "^3.0.3",
+    "turbo": "^1.10.14",
+    "typescript": "^5.2.2"
+  },
+  "packageManager": "pnpm@8.8.0"
 }
