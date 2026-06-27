@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "release": "pnpm build && node scripts/package-release.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,6 +18,8 @@
     "@types/react": "^18.2.21",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.1.0",
+    "adm-zip": "^0.5.17",
+    "archiver": "^8.0.0",
     "typescript": "^5.2.2",
     "vite": "^4.4.9"
   }

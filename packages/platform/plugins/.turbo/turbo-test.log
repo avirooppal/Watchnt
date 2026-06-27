@@ -1,0 +1,14 @@
+
+> @watchnt/plugins@2.0.0 test C:\Users\aviroop\Desktop\Watchnt\packages\platform\plugins
+> vitest run
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/aviroop/Desktop/Watchnt/packages/platform/plugins[39m
+
+ [32m✓[39m tests/plugins.test.ts [2m ([22m[2m2 tests[22m[2m)[22m[90m 72[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m   Start at [22m 20:22:35
+[2m   Duration [22m 13.96s[2m (transform 434ms, setup 3ms, collect 578ms, tests 72ms, environment 5ms, prepare 2.35s)[22m
+

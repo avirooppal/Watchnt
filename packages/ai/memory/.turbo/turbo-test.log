@@ -1,0 +1,14 @@
+
+> @watchnt/memory@2.0.0 test C:\Users\aviroop\Desktop\Watchnt\packages\ai\memory
+> vitest run
+
+
+[7m[1m[36m RUN [39m[22m[27m [36mv1.6.1[39m [90mC:/Users/aviroop/Desktop/Watchnt/packages/ai/memory[39m
+
+ [32m✓[39m tests/memory.test.ts [2m ([22m[2m1 test[22m[2m)[22m[90m 9[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 20:22:52
+[2m   Duration [22m 1.49s[2m (transform 379ms, setup 0ms, collect 407ms, tests 9ms, environment 0ms, prepare 460ms)[22m
+

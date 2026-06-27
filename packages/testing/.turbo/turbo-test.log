@@ -1,0 +1,5 @@
+
+> @watchnt/testing@2.0.0 test C:\Users\aviroop\Desktop\Watchnt\packages\testing
+> echo "No tests" && exit 0
+
+"No tests" 

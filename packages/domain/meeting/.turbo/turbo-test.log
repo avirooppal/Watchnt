@@ -1,0 +1,5 @@
+
+> @watchnt/meeting@2.0.0 test C:\Users\aviroop\Desktop\Watchnt\packages\domain\meeting
+> echo "No tests for meeting package" && exit 0
+
+"No tests for meeting package" 

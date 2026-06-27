@@ -1,0 +1,5 @@
+
+> @watchnt/contracts@2.0.0 test C:\Users\aviroop\Desktop\Watchnt\packages\foundation\contracts
+> echo "No tests for types-only package" && exit 0
+
+"No tests for types-only package" 
