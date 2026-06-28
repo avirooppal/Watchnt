@@ -179,12 +179,18 @@ importers:
 
   packages/workers:
     dependencies:
+      '@watchnt/models':
+        specifier: workspace:*
+        version: link:../models
       '@watchnt/pipeline':
         specifier: workspace:*
         version: link:../pipeline
       '@watchnt/shared':
         specifier: workspace:*
         version: link:../shared
+      '@watchnt/storage':
+        specifier: workspace:*
+        version: link:../storage
     devDependencies:
       typescript:
         specifier: ^5.0.0

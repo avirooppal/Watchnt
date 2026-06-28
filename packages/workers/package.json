@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@watchnt/shared": "workspace:*",
-    "@watchnt/pipeline": "workspace:*"
+    "@watchnt/pipeline": "workspace:*",
+    "@watchnt/models": "workspace:*",
+    "@watchnt/storage": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",

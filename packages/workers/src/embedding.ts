@@ -10,7 +10,7 @@ export class EmbeddingStep implements PipelineStep {
     if (event.type !== 'transcript.ready') return;
     const { contentId, transcript } = event.payload;
 
-    bus.publish({
+    await bus.publish({
       type: 'job.started',
       payload: { jobId: 'embed-' + contentId, stepName: this.name, contentId }
     });
@@ -37,12 +37,12 @@ export class EmbeddingStep implements PipelineStep {
       };
     });
 
-    bus.publish({
+    await bus.publish({
       type: 'embeddings.ready',
       payload: { contentId, chunks: mockChunks }
     });
 
-    bus.publish({
+    await bus.publish({
       type: 'job.completed',
       payload: { jobId: 'embed-' + contentId, stepName: this.name, result: mockChunks.length }
     });

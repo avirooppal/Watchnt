@@ -10,7 +10,7 @@ export class SummarizationStep implements PipelineStep {
     if (event.type !== 'transcript.ready') return;
     const { contentId, transcript } = event.payload;
 
-    bus.publish({
+    await bus.publish({
       type: 'job.started',
       payload: { jobId: 'summarize-' + contentId, stepName: this.name, contentId }
     });
@@ -35,12 +35,12 @@ export class SummarizationStep implements PipelineStep {
       ]
     };
 
-    bus.publish({
+    await bus.publish({
       type: 'summary.ready',
       payload: { contentId, summary: mockSummary }
     });
 
-    bus.publish({
+    await bus.publish({
       type: 'job.completed',
       payload: { jobId: 'summarize-' + contentId, stepName: this.name, result: mockSummary }
     });

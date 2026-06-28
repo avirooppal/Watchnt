@@ -10,7 +10,7 @@ export class TranscriptionStep implements PipelineStep {
     if (event.type !== 'audio.ready') return;
     const { contentId, buffer, mimeType } = event.payload;
 
-    bus.publish({
+    await bus.publish({
       type: 'job.started',
       payload: { jobId: 'transcribe-' + contentId, stepName: this.name, contentId }
     });
@@ -19,7 +19,7 @@ export class TranscriptionStep implements PipelineStep {
     // const whisper = await loadWhisperCpp();
     // const transcript = await whisper.transcribe(buffer);
 
-    bus.publish({
+    await bus.publish({
       type: 'job.progress',
       payload: { jobId: 'transcribe-' + contentId, stepName: this.name, progress: 50 }
     });
@@ -38,12 +38,12 @@ export class TranscriptionStep implements PipelineStep {
       ]
     };
 
-    bus.publish({
+    await bus.publish({
       type: 'transcript.ready',
       payload: { contentId, transcript: mockTranscript }
     });
 
-    bus.publish({
+    await bus.publish({
       type: 'job.completed',
       payload: { jobId: 'transcribe-' + contentId, stepName: this.name, result: mockTranscript }
     });
