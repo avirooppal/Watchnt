@@ -1,0 +1,17 @@
+{
+  "name": "@watchnt/models",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@watchnt/shared": "workspace:*",
+    "@watchnt/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.0"
+  }
+}
