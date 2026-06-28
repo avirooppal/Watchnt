@@ -1,0 +1,16 @@
+{
+  "name": "@watchnt/pipeline",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@watchnt/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^4.0.0"
+  }
+}
