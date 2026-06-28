@@ -50,6 +50,16 @@ export interface ExportFinishedEvent {
   payload: { contentId: ContentId; exportUrl?: string };
 }
 
+export interface FlashcardsReadyEvent {
+  type: 'flashcards.ready';
+  payload: { contentId: string; flashcards: { question: string; answer: string }[] };
+}
+
+export interface DiarizationReadyEvent {
+  type: 'diarization.ready';
+  payload: { contentId: ContentId; transcript: TranscriptObject };
+}
+
 // Lifecycle events
 export interface JobStartedEvent {
   type: 'job.started';
@@ -85,6 +95,8 @@ export type PipelineEvent =
   | SummaryReadyEvent
   | GraphUpdatedEvent
   | ExportFinishedEvent
+  | FlashcardsReadyEvent
+  | DiarizationReadyEvent
   | JobStartedEvent
   | JobProgressEvent
   | JobCompletedEvent

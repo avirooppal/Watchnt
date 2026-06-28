@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ContentRepository } from '../../src/repositories/content.js';
 import { initialSchemaMigration } from '../../src/schema.js';
+import { ModelFacade } from '../../src/facade.js';
 import { PGLiteRelationalStorage, DatabaseMigrationRunner } from '@watchnt/storage';
 import { createContentId, createTimestamp, isSuccess } from '@watchnt/shared';
 
@@ -10,8 +11,9 @@ describe('ContentRepository', () => {
 
   beforeEach(async () => {
     db = new PGLiteRelationalStorage('memory://models_test_' + Math.random());
-    const runner = new DatabaseMigrationRunner(db, [initialSchemaMigration]);
-    await runner.runMigrations();
+    const facade = new ModelFacade(db);
+    const migRes = await facade.migrate();
+    if (!isSuccess(migRes)) throw migRes.error;
     repo = new ContentRepository(db);
   });
 

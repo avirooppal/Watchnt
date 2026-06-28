@@ -79,3 +79,125 @@ export const vectorSchemaMigration: Migration = {
     `);
   }
 };
+
+export const graphSchemaMigration: Migration = {
+  version: 4,
+  name: 'init_graph_schema',
+  up: async (tx) => {
+    await tx.execute(`
+      CREATE TABLE entities (
+        id TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        content_id TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        FOREIGN KEY(content_id) REFERENCES content(id) ON DELETE CASCADE
+      )
+    `);
+
+    await tx.execute(`
+      CREATE TABLE graph_edges (
+        id TEXT PRIMARY KEY,
+        source_id TEXT NOT NULL,
+        target_id TEXT NOT NULL,
+        relationship TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        FOREIGN KEY(source_id) REFERENCES entities(id) ON DELETE CASCADE,
+        FOREIGN KEY(target_id) REFERENCES entities(id) ON DELETE CASCADE
+      )
+    `);
+  }
+};
+
+export const backlinksSchemaMigration: Migration = {
+  version: 5,
+  name: 'init_backlinks_schema',
+  up: async (tx) => {
+    await tx.execute(`
+      CREATE TABLE backlinks (
+        id TEXT PRIMARY KEY,
+        source_note_id TEXT NOT NULL,
+        target_note_name TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        FOREIGN KEY(source_note_id) REFERENCES notes(id) ON DELETE CASCADE
+      )
+    `);
+    
+    // Create an index for quick reverse-lookups by target name
+    await tx.execute(`
+      CREATE INDEX idx_backlinks_target ON backlinks(target_note_name);
+    `);
+  }
+};
+
+export const flashcardsSchemaMigration: Migration = {
+  version: 6,
+  name: 'init_flashcards_schema',
+  up: async (tx) => {
+    await tx.execute(`
+      CREATE TABLE flashcard_templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        front_template TEXT NOT NULL,
+        back_template TEXT NOT NULL,
+        created_at BIGINT NOT NULL
+      )
+    `);
+
+    // Insert a default template for basic Q&A
+    await tx.execute(`
+      INSERT INTO flashcard_templates (id, name, front_template, back_template, created_at)
+      VALUES ('tpl-basic-qa', 'Basic Q&A', '{{question}}', '{{answer}}', ${Date.now()})
+    `);
+
+    await tx.execute(`
+      CREATE TABLE flashcards (
+        id TEXT PRIMARY KEY,
+        content_id TEXT NOT NULL,
+        template_id TEXT NOT NULL,
+        front_data TEXT NOT NULL,
+        back_data TEXT NOT NULL,
+        created_at BIGINT NOT NULL,
+        next_review_at BIGINT NOT NULL,
+        FOREIGN KEY(content_id) REFERENCES content(id) ON DELETE CASCADE,
+        FOREIGN KEY(template_id) REFERENCES flashcard_templates(id) ON DELETE CASCADE
+      )
+    `);
+  }
+};
+
+export const hybridSearchSchemaMigration: Migration = {
+  version: 7,
+  name: 'init_hybrid_search_schema',
+  up: async (tx) => {
+    // Add tsvector column to knowledge_fragments
+    await tx.execute(`
+      ALTER TABLE knowledge_fragments ADD COLUMN fts_vector tsvector;
+    `);
+
+    // Create GIN index for fast text search
+    await tx.execute(`
+      CREATE INDEX idx_knowledge_fragments_fts ON knowledge_fragments USING GIN (fts_vector);
+    `);
+
+    // Update existing rows
+    await tx.execute(`
+      UPDATE knowledge_fragments SET fts_vector = to_tsvector('english', content);
+    `);
+
+    // Create a trigger to automatically update fts_vector when content changes
+    await tx.execute(`
+      CREATE OR REPLACE FUNCTION knowledge_fragments_fts_trigger() RETURNS trigger AS $$
+      begin
+        new.fts_vector := to_tsvector('english', coalesce(new.content, ''));
+        return new;
+      end
+      $$ LANGUAGE plpgsql;
+    `);
+
+    await tx.execute(`
+      CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
+      ON knowledge_fragments FOR EACH ROW EXECUTE PROCEDURE knowledge_fragments_fts_trigger();
+    `);
+  }
+};

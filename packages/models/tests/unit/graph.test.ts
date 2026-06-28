@@ -1,65 +1,81 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { GraphService } from '../../src/services/graph.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ModelFacade } from '../../src/facade.js';
-import { PGLiteRelationalStorage } from '@watchnt/storage';
-import { createContentId, isSuccess } from '@watchnt/shared';
+import { PGLiteRelationalStorage, type RelationalStorage } from '@watchnt/storage';
 
-describe('GraphService', () => {
-  let db: PGLiteRelationalStorage;
+describe('GraphRepository', () => {
+  let db: RelationalStorage;
   let facade: ModelFacade;
-  let graphService: GraphService;
 
   beforeEach(async () => {
     db = new PGLiteRelationalStorage('memory://graph_test_' + Math.random());
     facade = new ModelFacade(db);
-    await facade.migrate();
-    graphService = new GraphService(db);
+    const migrateRes = await facade.migrate();
+    if (!migrateRes.ok) throw migrateRes.error;
   });
 
-  it('traverses the relationship graph correctly to the given depth', async () => {
-    const c1 = createContentId('c1');
-    const c2 = createContentId('c2');
-    const c3 = createContentId('c3');
-    const c4 = createContentId('c4');
+  afterEach(async () => {
+  });
 
-    // Create contents
-    for (const id of [c1, c2, c3, c4]) {
-      await facade.content.create({
-        id, type: 'video', createdAt: Date.now() as any
-      } as any);
+  it('can create and retrieve entities and edges', async () => {
+    // Insert content first due to foreign key
+    await facade.content.create({
+      id: 'cont-1',
+      type: 'video',
+      createdAt: 100
+    });
+
+    const entityRes = await facade.graph.addEntity({
+      id: 'ent-1',
+      type: 'person',
+      name: 'Alice',
+      content_id: 'cont-1',
+      created_at: 100
+    });
+    expect(entityRes.ok).toBe(true);
+
+    const entity2Res = await facade.graph.addEntity({
+      id: 'ent-2',
+      type: 'technology',
+      name: 'Svelte',
+      content_id: 'cont-1',
+      created_at: 100
+    });
+    expect(entity2Res.ok).toBe(true);
+
+    const edgeRes = await facade.graph.addEdge({
+      id: 'edge-1',
+      source_id: 'ent-1',
+      target_id: 'ent-2',
+      relationship: 'uses',
+      created_at: 100
+    });
+    expect(edgeRes.ok).toBe(true);
+
+    const entities = await facade.graph.getEntitiesForContent('cont-1');
+    expect(entities.ok).toBe(true);
+    if (entities.ok) {
+      expect(entities.value).toHaveLength(2);
+      expect(entities.value[0].name).toBe('Alice');
     }
 
-    // Insert edges: c1 -> c2, c2 -> c3, c3 -> c4
-    await db.query('INSERT INTO content_relationships (source_id, target_id, type, created_at) VALUES ($1, $2, $3, $4)', [c1, c2, 'references', Date.now()]);
-    await db.query('INSERT INTO content_relationships (source_id, target_id, type, created_at) VALUES ($1, $2, $3, $4)', [c2, c3, 'references', Date.now()]);
-    await db.query('INSERT INTO content_relationships (source_id, target_id, type, created_at) VALUES ($1, $2, $3, $4)', [c3, c4, 'references', Date.now()]);
-
-    // Depth 1 from c1 should just return (c1->c2)
-    const resDepth1 = await graphService.getConnections(c1, 1);
-    expect(isSuccess(resDepth1)).toBe(true);
-    if (isSuccess(resDepth1)) {
-      expect(resDepth1.value.length).toBe(1);
-      expect(resDepth1.value[0].source_id).toBe(c1);
-      expect(resDepth1.value[0].target_id).toBe(c2);
-      expect(resDepth1.value[0].depth).toBe(1);
+    const related = await facade.graph.getRelatedEntities('ent-1');
+    expect(related.ok).toBe(true);
+    if (related.ok) {
+      expect(related.value).toHaveLength(1);
+      expect(related.value[0].entity.name).toBe('Svelte');
+      expect(related.value[0].relationship).toBe('uses');
     }
 
-    // Depth 2 from c1 should return (c1->c2) and (c2->c3)
-    const resDepth2 = await graphService.getConnections(c1, 2);
-    expect(isSuccess(resDepth2)).toBe(true);
-    if (isSuccess(resDepth2)) {
-      expect(resDepth2.value.length).toBe(2);
-      
-      const edge23 = resDepth2.value.find(e => e.source_id === c2 && e.target_id === c3);
-      expect(edge23).toBeDefined();
-      expect(edge23?.depth).toBe(2);
+    const allEntities = await facade.graph.getAllEntities();
+    expect(allEntities.ok).toBe(true);
+    if (allEntities.ok) {
+      expect(allEntities.value).toHaveLength(2);
     }
 
-    // Depth 3 from c1 should return all 3 edges
-    const resDepth3 = await graphService.getConnections(c1, 3);
-    expect(isSuccess(resDepth3)).toBe(true);
-    if (isSuccess(resDepth3)) {
-      expect(resDepth3.value.length).toBe(3);
+    const allEdges = await facade.graph.getAllEdges();
+    expect(allEdges.ok).toBe(true);
+    if (allEdges.ok) {
+      expect(allEdges.value).toHaveLength(1);
     }
   });
 });

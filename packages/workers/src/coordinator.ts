@@ -104,6 +104,49 @@ export class ProcessingCoordinator {
           });
         }
       }
+    } else if (event.type === 'graph.updated') {
+      const { newEntities, newEdges } = event.payload;
+      for (const entity of newEntities) {
+        await this.models.graph.addEntity({
+          id: entity.id,
+          type: entity.entityType,
+          name: entity.name,
+          content_id: entity.contentId,
+          created_at: entity.createdAt
+        });
+      }
+      for (const edge of newEdges) {
+        await this.models.graph.addEdge({
+          id: edge.id,
+          source_id: edge.sourceId,
+          target_id: edge.targetId,
+          relationship: edge.relationshipType,
+          created_at: edge.createdAt
+        });
+      }
+    } else if (event.type === 'flashcards.ready') {
+      const { contentId, flashcards } = event.payload;
+      for (const [idx, fc] of flashcards.entries()) {
+        await this.models.flashcards.createFlashcard({
+          id: `fc-${contentId}-${idx}-${Date.now()}`,
+          content_id: contentId,
+          template_id: 'tpl-basic-qa',
+          front_data: JSON.stringify({ question: fc.question }),
+          back_data: JSON.stringify({ answer: fc.answer }),
+          next_review_at: Date.now() // Due immediately
+        });
+      }
+    } else if (event.type === 'diarization.ready') {
+      // Upsert the diarized transcript so speaker labels are persisted.
+      // knowledge.addFragment uses ON CONFLICT … DO UPDATE so this is safe.
+      const { transcript } = event.payload;
+      await this.models.knowledge.addFragment({
+        id: transcript.id,
+        content_id: transcript.contentId,
+        type: transcript.objectType,
+        content: JSON.stringify(transcript.segments),
+        metadata: JSON.stringify({ diarized: true })
+      });
     }
   }
 }

@@ -17,11 +17,12 @@
 		"test:e2e": "playwright install && playwright test"
 	},
 	"dependencies": {
-		"@watchnt/shared": "workspace:*",
-		"@watchnt/storage": "workspace:*",
 		"@watchnt/models": "workspace:*",
 		"@watchnt/pipeline": "workspace:*",
-		"@watchnt/workers": "workspace:*"
+		"@watchnt/shared": "workspace:*",
+		"@watchnt/storage": "workspace:*",
+		"@watchnt/workers": "workspace:*",
+		"force-graph": "^1.51.4"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

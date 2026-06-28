@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { KnowledgeRepository } from '../../src/repositories/knowledge.js';
 import { ContentRepository } from '../../src/repositories/content.js';
 import { initialSchemaMigration, noteAndKnowledgeSchemaMigration } from '../../src/schema.js';
+import { ModelFacade } from '../../src/facade.js';
 import { PGLiteRelationalStorage, DatabaseMigrationRunner } from '@watchnt/storage';
 import { createContentId, isSuccess } from '@watchnt/shared';
 
@@ -12,8 +13,9 @@ describe('KnowledgeRepository', () => {
 
   beforeEach(async () => {
     db = new PGLiteRelationalStorage('memory://knowledge_test_' + Math.random());
-    const runner = new DatabaseMigrationRunner(db, [initialSchemaMigration, noteAndKnowledgeSchemaMigration]);
-    await runner.runMigrations();
+    const facade = new ModelFacade(db);
+    const migRes = await facade.migrate();
+    if (!isSuccess(migRes)) throw migRes.error;
     
     // Create base content since foreign key requires it
     const contentRepo = new ContentRepository(db);

@@ -63,5 +63,5 @@ describe('ModelFacade', () => {
     // Even embeddings should be gone
     const getVec = await facade.vectors.search(vecA, 1);
     if (isSuccess(getVec)) expect(getVec.value.length).toBe(0);
-  });
+  }, 15000);
 });

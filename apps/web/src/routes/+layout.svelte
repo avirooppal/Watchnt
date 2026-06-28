@@ -26,6 +26,14 @@
           <div class="shrink-0 flex items-center">
             <a href="/" class="text-xl font-bold text-indigo-600">Watch'nt</a>
           </div>
+          <nav class="ml-8 flex gap-4">
+            <a href="/library" class="text-sm text-gray-600 hover:text-indigo-600">Library</a>
+            <a href="/search" class="text-sm text-gray-600 hover:text-indigo-600">Search</a>
+            <a href="/chat" class="text-sm text-gray-600 hover:text-indigo-600">Chat</a>
+            <a href="/graph" class="text-sm text-gray-600 hover:text-indigo-600">Graph</a>
+            <a href="/flashcards" class="text-sm text-gray-600 hover:text-indigo-600">Flashcards</a>
+            <a href="/settings" class="text-sm text-gray-600 hover:text-indigo-600">Settings</a>
+          </nav>
         </div>
       </div>
     </div>

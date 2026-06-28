@@ -18,6 +18,8 @@ export class KnowledgeRepository {
     const query = `
       INSERT INTO knowledge_fragments (id, content_id, created_at, type, content, metadata)
       VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (id) DO UPDATE 
+      SET content = EXCLUDED.content, metadata = EXCLUDED.metadata
     `;
     
     const params = [

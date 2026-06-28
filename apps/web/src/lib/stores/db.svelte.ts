@@ -1,10 +1,12 @@
 import { ModelFacade } from '@watchnt/models';
-import { PGLiteRelationalStorage } from '@watchnt/storage';
+import { PGLiteRelationalStorage, IndexedDBSettingsStore } from '@watchnt/storage';
 
 class DbStore {
   facade = $state<ModelFacade | null>(null);
   loading = $state(true);
   error = $state<Error | null>(null);
+
+  settings = $state<IndexedDBSettingsStore | null>(null);
 
   async init() {
     if (this.facade) return;
@@ -12,10 +14,12 @@ class DbStore {
     try {
       this.loading = true;
       // Use OPFS data directory for persistence across reloads
-      // Wait, PGLiteRelationalStorage accepts a connection string.
-      // opfs://watchnt
       const storage = new PGLiteRelationalStorage('idb://watchnt');
       const facade = new ModelFacade(storage);
+      
+      const settingsStore = new IndexedDBSettingsStore();
+      await settingsStore.init();
+      this.settings = settingsStore;
       
       // Run migrations
       await facade.migrate();

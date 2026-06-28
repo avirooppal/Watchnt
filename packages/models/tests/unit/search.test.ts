@@ -61,4 +61,49 @@ describe('SearchService', () => {
       expect(result.content_title).toBe('Amazing AI Video');
     }
   });
+
+  it('performs hybrid search with RRF and recency boost', async () => {
+    const contentId = createContentId('vid-hybrid');
+    
+    // 1. Create content
+    await facade.content.create({
+      id: contentId,
+      type: 'video',
+      createdAt: Date.now() as any,
+      title: 'PostgreSQL vs MySQL'
+    } as any);
+    
+    // 2. Create knowledge fragment (chunk) - fts_vector trigger will run
+    const fragId = createNoteId('chunk-hybrid');
+    await facade.knowledge.addFragment({
+      id: fragId,
+      content_id: contentId,
+      type: 'chunk',
+      content: 'PostgreSQL is an advanced relational database.'
+    });
+
+    // 3. Create embedding for the fragment
+    const vecA = new Array(384).fill(0.2);
+    await facade.vectors.addEmbedding({
+      id: 'vec-hybrid',
+      content_id: contentId,
+      fragment_id: fragId,
+      embedding: vecA
+    });
+
+    // 4. Search using searchHybrid
+    const searchRes = await searchService.searchHybrid('database', vecA, 5);
+    expect(isSuccess(searchRes)).toBe(true);
+    
+    if (isSuccess(searchRes)) {
+      expect(searchRes.value.length).toBe(1);
+      const result = searchRes.value[0];
+      
+      expect(result.similarity).toBeGreaterThan(0);
+      expect(result.fragment_id).toBe(fragId);
+      expect(result.fragment_text).toBe('PostgreSQL is an advanced relational database.');
+      expect(result.content_id).toBe(contentId);
+      expect(result.content_title).toBe('PostgreSQL vs MySQL');
+    }
+  });
 });
