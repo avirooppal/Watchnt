@@ -6,161 +6,165 @@ Watch'nt is a fully browser-based application that turns your videos, podcasts, 
 
 ---
 
+## 🏗️ System Workflow & Event Architecture
+
+Watch'nt operates on an asynchronous, event-driven pipeline where decoupled steps communicate over a shared event bus (`packages/pipeline`). 
+
+```
+[Import Content] (Video, Audio, PDF, Screenshot, Article)
+       │
+       ▼
+  content.created
+       │
+       ├───────────────────────────────┐
+       ▼ (if Video/Audio)              ▼ (if PDF/Screenshot/Article)
+  audio.ready                      OcrStep
+       │                               │
+       ▼                               ▼
+  TranscriptionStep               chunks.ready
+       │                               │
+       ▼                               ▼
+  transcript.ready                 EmbeddingStep
+       │                               │
+       ▼                               ▼
+  DiarizationStep                  embeddings.ready
+       │                               │
+       └──────────────┬────────────────┘
+                      ▼
+               [Storage Engine] (PGLite / IndexedDB)
+                      │
+                      ├───────────────────────────────┐
+                      ▼                               ▼
+              SummarizationStep               EntityExtractionStep
+                      │                               │
+                      ▼                               ▼
+                summary.ready                   graph.updated
+                      │
+                      ▼
+           FlashcardExtractionStep ──► flashcards.ready
+```
+
+---
+
 ## ✨ Features
 
-| Feature | Status |
-|---|---|
-| 🎙️ Local speech-to-text transcription (Whisper.cpp WASM) | ✅ Pipeline wired |
-| 🔍 Hybrid retrieval — vector + BM25 RRF search | ✅ |
-| 🧠 Speaker diarization (pause heuristic + ONNX stub) | ✅ |
-| 🗺️ Knowledge graph (entities + relationships) | ✅ |
-| 🔗 Backlink tracking (Obsidian-style `[[wikilinks]]`) | ✅ |
-| 🃏 Flashcard generation & spaced-repetition review | ✅ |
-| 💬 Chat / RAG UI (retrieval-augmented Q&A) | ✅ |
-| 📄 OCR for PDFs, screenshots & articles | ✅ Pipeline stub |
-| 🔌 Plugin system (sandboxed Web Workers, permission-gated RPC) | ✅ |
-| 🗃️ Two-way Obsidian vault awareness | ✅ |
-| 🔑 BYOK (Bring-Your-Own-Key) for cloud AI providers | ✅ AES-GCM encrypted |
-| 🧩 Memory engine seam (future vision) | ✅ Interface stub |
-
----
-
-## 🏗️ Architecture
-
-```
-Watch'nt/
-├── apps/
-│   └── web/                  # SvelteKit PWA — the only user-facing app
-│       └── src/routes/
-│           ├── /              # Home / Import
-│           ├── /library       # Content library
-│           ├── /video/[id]    # Video detail + note editor
-│           ├── /chat          # RAG chat interface ← NEW
-│           ├── /search        # Semantic / keyword search
-│           ├── /graph         # Knowledge graph explorer
-│           ├── /flashcards    # Spaced-repetition review
-│           └── /settings      # BYOK API key management
-│
-├── packages/
-│   ├── shared/               # Branded ID types, Result<T>, domain types
-│   ├── storage/              # PGLite (SQLite WASM) + IndexedDB adapters
-│   ├── models/               # Repository + service layer (ModelFacade)
-│   │   └── services/
-│   │       ├── search.ts     # Vector + FTS + Hybrid RRF retrieval
-│   │       ├── rag.ts        # ContextBuilder for RAG prompts ← NEW
-│   │       ├── notes.ts      # Notes + wikilink extraction
-│   │       └── graph.ts      # Entity / edge queries
-│   ├── pipeline/             # Event bus, step registry, PipelineEvent types
-│   ├── workers/              # Pipeline steps (run in Web Workers)
-│   │   ├── transcription.ts  # STT (Whisper stub)
-│   │   ├── embedding.ts      # Chunk → vector embedding
-│   │   ├── summary.ts        # Summarisation
-│   │   ├── entity_extraction.ts
-│   │   ├── flashcard_extraction.ts
-│   │   ├── diarization.ts    # Speaker diarization ← NEW
-│   │   ├── ocr.ts            # OCR for PDFs/screenshots ← NEW
-│   │   └── coordinator.ts    # Event persistence orchestrator
-│   ├── ai/                   # AI provider abstraction + AES-GCM key storage
-│   ├── plugins/              # Plugin host (sandboxed Worker) + RPC mediator
-│   ├── obsidian/             # Vault tracker (FSAA + download fallback) ← NEW
-│   └── memory/               # Memory engine interface seam (future) ← NEW
-│
-└── docs/
-    ├── implementation-plan.md  # Full 11-phase roadmap
-    └── WatchNT_Browser_Architecture_Blueprint.md
-```
-
-### Key Design Principles
-
-- **Everything runs in the browser** — SQLite via PGLite (WASM), Web Workers for CPU-heavy AI, OPFS for blob storage, IndexedDB for settings.
-- **Pipeline is event-driven** — steps subscribe to typed events (`audio.ready → transcript.ready → chunks.ready → embeddings.ready → …`). Adding a new step never touches existing ones.
-- **AI provider abstraction** — no step calls Whisper, WebLLM, or a cloud API directly. Cloud keys are opt-in and AES-GCM encrypted at rest.
-- **Plugin sandbox** — third-party plugins run in isolated Blob URL Workers. Every host API call is permission-gated by `RpcMediator` before execution.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Node.js 20+](https://nodejs.org)
-- [pnpm 9+](https://pnpm.io) — `npm install -g pnpm`
-
-### Install & Run
-
-```bash
-git clone https://github.com/avirooppal/Watchnt.git
-cd Watchnt
-
-pnpm install
-pnpm run dev          # starts the SvelteKit dev server
-```
-
-Open [http://localhost:5173](http://localhost:5173) in a Chromium-based browser for the best experience (File System Access API, OPFS).
-
-### Run Tests
-
-```bash
-# All packages
-pnpm -r run test
-
-# Individual packages
-cd packages/models  && pnpm run test
-cd packages/workers && pnpm run test
-cd packages/plugins && pnpm run test
-cd packages/obsidian && pnpm run test
-cd packages/memory  && pnpm run test
-```
+| Feature | Status | Technical Details |
+|---|---|---|
+| **🎙️ Local Speech-to-Text** | ✅ Pipeline wired | Quantized Whisper.cpp models running in Web Workers. |
+| **🔍 Hybrid Retrieval** | ✅ Completed | Reciprocal Rank Fusion (RRF) combining cosine vector similarities with BM25 keyword rankings. |
+| **⚡ Recency Boost** | ✅ Completed | Automated mathematical decay multiplier boosting newer entries `(1.0 + EXP(-age/30_days))`. |
+| **🧠 Speaker Diarization** | ✅ Completed | Heuristic pause/energy speaker segmentation (>1500ms segment gap changes Speaker ID) + ONNX embedding stubs. |
+| **🗺️ Knowledge Graph** | ✅ Completed | Extracts entities and maps relationships in a fully queryable graph model inside SQLite. |
+| **🔗 Backlinks** | ✅ Completed | Automatically extracts Obsidian-style `[[wikilinks]]` to construct a bidirectional wiki reference network. |
+| **🃏 Flashcard Generation** | ✅ Completed | Automated template matching and candidate card extraction for spaced-repetition study. |
+| **💬 Chat / RAG UI** | ✅ Completed | Retrieval-augmented Q&A grounding agent with hybrid, vector-only, and keyword-only search modes. |
+| **📄 Multimodal OCR** | ✅ Completed | Importer routing pipeline step for processing PDF text layouts, screenshot dimensions, and article URLs. |
+| **🔌 Plugin System** | ✅ Completed | Web Worker based Blob sandboxing with a strict, manifest-based permission-gated host RPC bridge. |
+| **🗃️ Obsidian Vault Sync** | ✅ Completed | Real-time file changes tracking using the File System Access API with automated SHA-256 conflict detection. |
+| **🔑 Secure BYOK** | ✅ Completed | Local encryption of OpenAI, Anthropic, and Gemini API keys using AES-GCM + PBKDF2 Web Crypto. |
 
 ---
 
 ## 📦 Package Overview
 
-| Package | Purpose |
-|---|---|
-| `@watchnt/shared` | Branded types, `Result<T>`, domain model |
-| `@watchnt/storage` | PGLite relational storage + IndexedDB settings |
-| `@watchnt/models` | Repositories, services, `ModelFacade` |
-| `@watchnt/pipeline` | Event bus, typed `PipelineEvent` union |
-| `@watchnt/workers` | All pipeline steps (transcription, embedding, OCR, diarization…) |
-| `@watchnt/ai` | AI provider abstraction + encrypted BYOK key storage |
-| `@watchnt/plugins` | Plugin host + RPC mediator + SDK shim |
-| `@watchnt/obsidian` | Obsidian vault tracker (conflict detection + FSAA) |
-| `@watchnt/memory` | Memory engine interface seam (future vision, Blueprint §16) |
+Watch'nt is organized as a monorepo workspace for clean code isolation:
+
+| Package | Path | Purpose |
+|---|---|---|
+| `@watchnt/shared` | [`packages/shared`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/shared) | Branded types (`ContentId`, `NoteId`), Result wrappers, utility models. |
+| `@watchnt/storage` | [`packages/storage`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/storage) | PGLite (SQLite WASM) database driver, migration runner, settings store. |
+| `@watchnt/models` | [`packages/models`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/models) | Repositories (Notes, Entities, Edges, Flashcards) and services (`ContextBuilder` for RAG). |
+| `@watchnt/pipeline` | [`packages/pipeline`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/pipeline) | Decoupled event bus orchestrating message passing between pipeline steps. |
+| `@watchnt/workers` | [`packages/workers`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/workers) | Web Worker executables for CPU-heavy tasks: STT, embeddings, summarization, OCR, diarization. |
+| `@watchnt/ai` | [`packages/ai`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/ai) | Model facade interface and client-side PBKDF2/AES-GCM cryptographic utilities. |
+| `@watchnt/plugins` | [`packages/plugins`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/plugins) | Isolated Web Worker sandboxed runtime and permission-gated RPC mediator. |
+| `@watchnt/obsidian` | [`packages/obsidian`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/obsidian) | File system change tracker, vault importer, and conflict resolver. |
+| `@watchnt/memory` | [`packages/memory`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/memory) | Deluxe interface seams for Future Vision taxonomy storage. |
+| **Web App** | [`apps/web`](file:///c:/Users/aviroop/Desktop/Watch'nt/apps/web) | SvelteKit front-end web application with rich CSS visualizations. |
 
 ---
 
-## 🔌 Plugin SDK
+## 🚀 How to Run the Application
 
-Plugins run in sandboxed Web Workers and communicate via a permission-gated RPC bridge.
+Follow these steps to build, run, and test the entire project locally:
 
+### 1. Prerequisites
+- **Node.js**: Version `22.0.0` or higher is recommended.
+- **PNPM**: Package manager version `10.0.0` or higher. Install it via:
+  ```bash
+  npm install -g pnpm
+  ```
+
+### 2. Installation
+Clone the repository and install the monorepo dependencies:
+```bash
+git clone https://github.com/avirooppal/Watchnt.git
+cd Watchnt
+pnpm install
+```
+
+### 3. Running the Web Application
+Since the root package operates as a monorepo workspace, you run the SvelteKit development server using the workspace filter or by navigating into the app directory:
+
+**Option A: Run from the root workspace**
+```bash
+pnpm --filter web dev
+```
+
+**Option B: Run from the application directory**
+```bash
+cd apps/web
+pnpm run dev
+```
+
+The application will build the dev modules and start on **[http://localhost:5173](http://localhost:5173)**. Open this link in any modern Chromium-based browser (Chrome, Edge, Opera) to ensure access to native browser storage interfaces (Origin Private File System, File System Access API).
+
+### 4. Running Unit & Integration Tests
+You can run all tests across every workspace package, or run tests inside a specific package.
+
+**To run all package tests from the workspace root:**
+```bash
+pnpm test
+```
+
+**To run tests for a specific package:**
+```bash
+# Model & Database service tests
+pnpm --filter @watchnt/models test
+
+# Pipeline worker & step tests
+pnpm --filter @watchnt/workers test
+
+# Plugin sandbox & RPC tests
+pnpm --filter @watchnt/plugins test
+
+# Obsidian sync & vault tracker tests
+pnpm --filter @watchnt/obsidian test
+
+# Memory interface tests
+pnpm --filter @watchnt/memory test
+```
+
+---
+
+## 🔌 Plugin SDK Reference
+
+Plugins run in sandboxed Web Workers with no direct access to the DOM or global storage. They must request permissions in their manifest to gain access to corresponding RPC APIs.
+
+### Supported Manifest
 ```json
 {
-  "id": "my-plugin",
-  "name": "My Plugin",
+  "id": "external-summarizer",
+  "name": "Custom Summarizer",
   "version": "1.0.0",
-  "permissions": ["retrieval:search", "ai:invoke", "notes:generate"],
+  "permissions": ["ai:invoke", "storage:read", "storage:write"],
   "capabilities": ["note-generator"]
 }
 ```
 
-See [`packages/plugins/README.md`](packages/plugins/README.md) for the full SDK reference.
-
----
-
-## 🗺️ Roadmap
-
-The implementation follows the [WatchNT Browser Architecture Blueprint](docs/WatchNT_Browser_Architecture_Blueprint.md). All 11 phases of the [implementation plan](docs/implementation-plan.md) are complete:
-
-- **Phases 1–6**: App shell, storage, pipeline engine, AI provider layer, STT, embedding
-- **Phases 7–9**: Knowledge graph, flashcards, plugin host v1, BYOK settings
-- **Phase 10**: Hybrid retrieval (RRF), speaker diarization, full plugin system, Obsidian vault
-- **Phase 11**: Memory engine seam, OCR/multimodal importers, Chat & RAG UI
-
-Future work (Blueprint §16): real-time collaboration, multimodal memory, webcam integration.
+For SDK methods and setup details, see [`packages/plugins/README.md`](packages/plugins/README.md).
 
 ---
 
 ## 📄 License
-
-MIT — see [LICENSE](LICENSE).
+This project is licensed under the MIT License - see the LICENSE file for details.
