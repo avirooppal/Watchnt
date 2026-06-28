@@ -1,23 +1,23 @@
 # Watch'nt
 
-> **Your personal, privacy-first AI knowledge base for everything you watch, read, and listen to.**
+## Project Overview
 
-Watch'nt is a fully browser-based application that turns your videos, podcasts, PDFs, screenshots, and articles into a searchable, interconnected knowledge graph — entirely on-device. No cloud required, no data leaves your browser.
+Watch'nt is a browser-based, offline-first personal knowledge engine designed to ingest, process, and query multimedia content entirely on-device. The application operates client-side to build a local semantic database and knowledge graph from videos, podcasts, PDFs, screenshots, and web articles. Client-side privacy is guaranteed as all storage, processing pipeline steps, and inference are sandboxed locally.
 
 ---
 
-## 🏗️ System Workflow & Event Architecture
+## Architectural Workflow and Event Architecture
 
-Watch'nt operates on an asynchronous, event-driven pipeline where decoupled steps communicate over a shared event bus (`packages/pipeline`). 
+The core of Watch'nt is an asynchronous, event-driven pipeline coordinated by a decoupled event bus (`packages/pipeline`). Each step registers interest in specific event schemas and processes them inside Web Worker contexts to keep the main thread unblocked.
 
 ```
-[Import Content] (Video, Audio, PDF, Screenshot, Article)
+[Import Layer] (Video, Audio, PDF, Screenshot, Article)
        │
        ▼
   content.created
        │
        ├───────────────────────────────┐
-       ▼ (if Video/Audio)              ▼ (if PDF/Screenshot/Article)
+       ▼ (Video/Audio)                 ▼ (PDF/Screenshot/Article)
   audio.ready                      OcrStep
        │                               │
        ▼                               ▼
@@ -46,125 +46,121 @@ Watch'nt operates on an asynchronous, event-driven pipeline where decoupled step
 
 ---
 
-## ✨ Features
+## Feature Matrix
 
-| Feature | Status | Technical Details |
+| Feature | Status | Implementation Details |
 |---|---|---|
-| **🎙️ Local Speech-to-Text** | ✅ Pipeline wired | Quantized Whisper.cpp models running in Web Workers. |
-| **🔍 Hybrid Retrieval** | ✅ Completed | Reciprocal Rank Fusion (RRF) combining cosine vector similarities with BM25 keyword rankings. |
-| **⚡ Recency Boost** | ✅ Completed | Automated mathematical decay multiplier boosting newer entries `(1.0 + EXP(-age/30_days))`. |
-| **🧠 Speaker Diarization** | ✅ Completed | Heuristic pause/energy speaker segmentation (>1500ms segment gap changes Speaker ID) + ONNX embedding stubs. |
-| **🗺️ Knowledge Graph** | ✅ Completed | Extracts entities and maps relationships in a fully queryable graph model inside SQLite. |
-| **🔗 Backlinks** | ✅ Completed | Automatically extracts Obsidian-style `[[wikilinks]]` to construct a bidirectional wiki reference network. |
-| **🃏 Flashcard Generation** | ✅ Completed | Automated template matching and candidate card extraction for spaced-repetition study. |
-| **💬 Chat / RAG UI** | ✅ Completed | Retrieval-augmented Q&A grounding agent with hybrid, vector-only, and keyword-only search modes. |
-| **📄 Multimodal OCR** | ✅ Completed | Importer routing pipeline step for processing PDF text layouts, screenshot dimensions, and article URLs. |
-| **🔌 Plugin System** | ✅ Completed | Web Worker based Blob sandboxing with a strict, manifest-based permission-gated host RPC bridge. |
-| **🗃️ Obsidian Vault Sync** | ✅ Completed | Real-time file changes tracking using the File System Access API with automated SHA-256 conflict detection. |
-| **🔑 Secure BYOK** | ✅ Completed | Local encryption of OpenAI, Anthropic, and Gemini API keys using AES-GCM + PBKDF2 Web Crypto. |
+| Local Speech-to-Text | Complete | Quantized Whisper.cpp models running in isolated Web Workers. |
+| Hybrid Retrieval | Complete | Reciprocal Rank Fusion (RRF) combining cosine vector similarities with BM25 keyword rankings. |
+| Temporal Boosting | Complete | Time-decay multiplier prioritizing newer entries: `(1.0 + EXP(-age/30_days))`. |
+| Speaker Diarization | Complete | Heuristic pause speaker segmentation (>1500ms gap detection) with ONNX embedding hooks. |
+| Knowledge Graph | Complete | Extraction and mapping of entity relationships in a SQLite schema. |
+| Bidirectional Linking | Complete | Obsidian-style `[[wikilink]]` extraction to map related documents. |
+| Flashcard Generation | Complete | Automated extraction of study candidate cards mapped to spaced-repetition schedules. |
+| Grounded Chat (RAG) | Complete | Contextual Q&A builder with hybrid, vector-only, and FTS search modes. |
+| Multimodal OCR | Complete | Processing routes for PDF layouts, screenshots, and article markup. |
+| Plugin System | Complete | Sandboxed Web Worker plugin host with manifest-declared, permission-gated RPC bridge. |
+| Obsidian Vault Sync | Complete | Bidirectional sync with File System Access API and SHA-256 conflict detection. |
+| Secure BYOK | Complete | PBKDF2/AES-GCM encryption for client-provided API keys. |
 
 ---
 
-## 📦 Package Overview
+## Workspace Structure
 
-Watch'nt is organized as a monorepo workspace for clean code isolation:
+The project is structured as a monorepo workspace for logical boundaries:
 
-| Package | Path | Purpose |
+| Package | Workspace Name | Purpose |
 |---|---|---|
-| `@watchnt/shared` | [`packages/shared`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/shared) | Branded types (`ContentId`, `NoteId`), Result wrappers, utility models. |
-| `@watchnt/storage` | [`packages/storage`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/storage) | PGLite (SQLite WASM) database driver, migration runner, settings store. |
-| `@watchnt/models` | [`packages/models`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/models) | Repositories (Notes, Entities, Edges, Flashcards) and services (`ContextBuilder` for RAG). |
-| `@watchnt/pipeline` | [`packages/pipeline`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/pipeline) | Decoupled event bus orchestrating message passing between pipeline steps. |
-| `@watchnt/workers` | [`packages/workers`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/workers) | Web Worker executables for CPU-heavy tasks: STT, embeddings, summarization, OCR, diarization. |
-| `@watchnt/ai` | [`packages/ai`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/ai) | Model facade interface and client-side PBKDF2/AES-GCM cryptographic utilities. |
-| `@watchnt/plugins` | [`packages/plugins`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/plugins) | Isolated Web Worker sandboxed runtime and permission-gated RPC mediator. |
-| `@watchnt/obsidian` | [`packages/obsidian`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/obsidian) | File system change tracker, vault importer, and conflict resolver. |
-| `@watchnt/memory` | [`packages/memory`](file:///c:/Users/aviroop/Desktop/Watch'nt/packages/memory) | Deluxe interface seams for Future Vision taxonomy storage. |
-| **Web App** | [`apps/web`](file:///c:/Users/aviroop/Desktop/Watch'nt/apps/web) | SvelteKit front-end web application with rich CSS visualizations. |
+| `@watchnt/shared` | `packages/shared` | Branded identity types, Result wrappers, domain objects, and schemas. |
+| `@watchnt/storage` | `packages/storage` | PGLite (SQLite WASM) database driver, migration runner, settings store. |
+| `@watchnt/models` | `packages/models` | Database repositories and RAG `ContextBuilder` services. |
+| `@watchnt/pipeline` | `packages/pipeline` | Core event bus defining the pipeline execution lifecycle and event types. |
+| `@watchnt/workers` | `packages/workers` | Processing step definitions (Transcription, Embedding, Summarization, OCR, Diarization). |
+| `@watchnt/ai` | `packages/ai` | Interface layer for models and client-side encryption utilities. |
+| `@watchnt/plugins` | `packages/plugins` | Isolated Web Worker sandboxing and permission-gated RPC mediator. |
+| `@watchnt/obsidian` | `packages/obsidian` | Obsidian vault tracking, File System Access API watcher, and conflict resolution. |
+| `@watchnt/memory` | `packages/memory` | Interface seams for future episodic and semantic memory engines. |
+| **Web Client** | `apps/web` | SvelteKit progressive web application (PWA). |
 
 ---
 
-## 🚀 How to Run the Application
-
-Follow these steps to build, run, and test the entire project locally:
+## Installation and Execution
 
 ### 1. Prerequisites
-- **Node.js**: Version `22.0.0` or higher is recommended.
-- **PNPM**: Package manager version `10.0.0` or higher. Install it via:
+- **Node.js**: Version `22.0.0` or higher.
+- **PNPM**: Package manager version `10.0.0` or higher. Install internationally:
   ```bash
   npm install -g pnpm
   ```
 
-### 2. Installation
-Clone the repository and install the monorepo dependencies:
+### 2. Dependency Resolution
+Clone the codebase and install dependencies across the workspace:
 ```bash
 git clone https://github.com/avirooppal/Watchnt.git
 cd Watchnt
 pnpm install
 ```
 
-### 3. Running the Web Application
-Since the root package operates as a monorepo workspace, you run the SvelteKit development server using the workspace filter or by navigating into the app directory:
+### 3. Running the Dev Server
+Vite handles compilation and hot module reloading. You can start the development server from the root directory:
 
-**Option A: Run from the root workspace**
+**Option A (Workspace Target)**
 ```bash
 pnpm --filter web dev
 ```
 
-**Option B: Run from the application directory**
+**Option B (Directory Execution)**
 ```bash
 cd apps/web
 pnpm run dev
 ```
 
-The application will build the dev modules and start on **[http://localhost:5173](http://localhost:5173)**. Open this link in any modern Chromium-based browser (Chrome, Edge, Opera) to ensure access to native browser storage interfaces (Origin Private File System, File System Access API).
+The application is served at **[http://localhost:5173](http://localhost:5173)**. A Chromium-based browser is recommended to support advanced storage APIs.
 
-### 4. Running Unit & Integration Tests
-You can run all tests across every workspace package, or run tests inside a specific package.
-
-**To run all package tests from the workspace root:**
+### 4. Running the Test Suites
+To run all tests across all monorepo packages sequentially:
 ```bash
 pnpm test
 ```
 
-**To run tests for a specific package:**
+To run tests in isolation for a single package:
 ```bash
-# Model & Database service tests
+# Models package
 pnpm --filter @watchnt/models test
 
-# Pipeline worker & step tests
+# Pipeline workers package
 pnpm --filter @watchnt/workers test
 
-# Plugin sandbox & RPC tests
+# Sandbox and plugin host package
 pnpm --filter @watchnt/plugins test
 
-# Obsidian sync & vault tracker tests
+# Obsidian sync package
 pnpm --filter @watchnt/obsidian test
 
-# Memory interface tests
+# Memory package
 pnpm --filter @watchnt/memory test
 ```
 
 ---
 
-## 🔌 Plugin SDK Reference
+## Plugin SDK Integration
 
-Plugins run in sandboxed Web Workers with no direct access to the DOM or global storage. They must request permissions in their manifest to gain access to corresponding RPC APIs.
+Plugins run in sandboxed Web Worker contexts with no direct access to Svelte DOM structures or global storage. They must state their permissions explicitly in their manifest to gain access to RPC-gated capabilities.
 
-### Supported Manifest
+### Manifest Configuration Example
 ```json
 {
-  "id": "external-summarizer",
-  "name": "Custom Summarizer",
+  "id": "my-custom-plugin",
+  "name": "Custom Analyzer",
   "version": "1.0.0",
   "permissions": ["ai:invoke", "storage:read", "storage:write"],
   "capabilities": ["note-generator"]
 }
 ```
 
-For SDK methods and setup details, see [`packages/plugins/README.md`](packages/plugins/README.md).
+For SDK methods and setup details, refer to the [`packages/plugins/README.md`](packages/plugins/README.md) documentation.
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## License
+Licensed under the MIT License. Refer to the LICENSE file for details.
