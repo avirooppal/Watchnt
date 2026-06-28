@@ -1,22 +1,22 @@
 <script lang="ts">
-	let { children } = $props();
+  import '../app.css';
+  let { children } = $props();
 </script>
 
-<div class="min-h-screen bg-gray-900 text-white font-sans">
-	<nav class="border-b border-gray-800 p-4">
-		<div class="container mx-auto flex items-center justify-between">
-			<a href="/" class="text-xl font-bold text-blue-400">WatchNT</a>
-			<div class="flex gap-4">
-				<a href="/import" class="hover:text-blue-300">Import</a>
-				<a href="/library" class="hover:text-blue-300">Library</a>
-				<a href="/search" class="hover:text-blue-300">Search</a>
-				<a href="/graph" class="hover:text-blue-300">Graph</a>
-				<a href="/settings" class="hover:text-blue-300">Settings</a>
-			</div>
-		</div>
-	</nav>
+<div class="min-h-screen bg-gray-50 text-gray-900">
+  <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex">
+          <div class="shrink-0 flex items-center">
+            <a href="/" class="text-xl font-bold text-indigo-600">Watch'nt</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
 
-	<main class="container mx-auto p-4 py-8">
-		{@render children()}
-	</main>
+  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    {@render children()}
+  </main>
 </div>
