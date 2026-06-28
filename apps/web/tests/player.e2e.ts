@@ -1,7 +1,34 @@
 import { test, expect } from '@playwright/test';
 
 test('Video playback and transcript interaction', async ({ page }) => {
-  // Go directly to the video page for ID 'test'
+  // Go to homepage first to ensure DB initializes
+  await page.goto('/');
+  await page.waitForFunction(() => {
+    const store = (window as any).__dbStore;
+    return store && store.facade !== null;
+  });
+
+  // Inject mock data
+  await page.evaluate(async () => {
+    const store = (window as any).__dbStore;
+    await store.facade.content.create({ id: 'test', type: 'video', createdAt: Date.now(), title: 'Test Video' });
+    await store.facade.knowledge.addFragment({
+      id: 'frag-1',
+      content_id: 'test',
+      type: 'chunk',
+      content: 'Welcome to this demo video.',
+      metadata: JSON.stringify({ startMs: 0, endMs: 5000 })
+    });
+    await store.facade.knowledge.addFragment({
+      id: 'frag-2',
+      content_id: 'test',
+      type: 'chunk',
+      content: 'Here we discuss AI architectures.',
+      metadata: JSON.stringify({ startMs: 5000, endMs: 12000 })
+    });
+  });
+
+  // Now go to the video page
   await page.goto('/video/test');
 
   // Verify elements render
@@ -9,7 +36,7 @@ test('Video playback and transcript interaction', async ({ page }) => {
   await expect(page.locator('text=Transcript')).toBeVisible();
   
   // Verify the mock transcript items render
-  await expect(page.locator('text=Welcome to this demo video.')).toBeVisible();
+  await expect(page.locator('text=Welcome to this demo video.')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('text=Here we discuss AI architectures.')).toBeVisible();
 
   // Click on the second transcript segment (starts at 5s)

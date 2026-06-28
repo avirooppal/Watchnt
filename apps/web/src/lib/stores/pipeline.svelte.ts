@@ -15,9 +15,21 @@ class PipelineStore {
     if (this.coordinator) return; // Already initialized
     
     this.coordinator = new ProcessingCoordinator(this.bus, dbStore.facade);
+    this.coordinator.startListening();
     this.transcription = new TranscriptionStep(this.bus);
     this.embedding = new EmbeddingStep(this.bus);
     this.summary = new SummarizationStep(this.bus);
+    
+    // Register steps to bus
+    this.registerStep(this.transcription);
+    this.registerStep(this.embedding);
+    this.registerStep(this.summary);
+  }
+
+  private registerStep(step: any) {
+    for (const eventType of step.handles) {
+      this.bus.subscribe(eventType, (event) => step.execute(event, this.bus));
+    }
   }
 
   async uploadVideo(file: File) {

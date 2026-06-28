@@ -12,10 +12,10 @@
   
   function getTimestamps(fragment: any) {
     try {
-      const meta = fragment.metadata ? JSON.parse(fragment.metadata) : {};
+      const meta = fragment.metadata ? (typeof fragment.metadata === 'string' ? JSON.parse(fragment.metadata) : fragment.metadata) : {};
       return {
-        start: (meta.startTime ?? 0) / 1000,
-        end: (meta.endTime ?? 0) / 1000
+        start: (meta.startMs ?? meta.startTime ?? 0) / 1000,
+        end: (meta.endMs ?? meta.endTime ?? 0) / 1000
       };
     } catch {
       return { start: 0, end: 0 };

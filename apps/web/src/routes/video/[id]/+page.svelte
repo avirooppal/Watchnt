@@ -1,18 +1,34 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import TranscriptViewer from '$lib/components/TranscriptViewer.svelte';
+  import { dbStore } from '$lib/stores/db.svelte';
+  import { isSuccess } from '@watchnt/shared';
 
   let videoId = $derived($page.params.id);
   
   let videoElement: HTMLVideoElement | undefined = $state();
   let currentTime = $state(0);
+  let fragments = $state<any[]>([]);
+  let videoRecord = $state<any>(null);
 
-  // Mock fragments for now
-  const mockFragments = [
-    { id: '1', content: 'Welcome to this demo video.', metadata: JSON.stringify({ startTime: 0, endTime: 5000 }) },
-    { id: '2', content: 'Here we discuss AI architectures.', metadata: JSON.stringify({ startTime: 5000, endTime: 12000 }) },
-    { id: '3', content: 'And how OPFS speeds up local storage.', metadata: JSON.stringify({ startTime: 12000, endTime: 25000 }) }
-  ];
+  $effect(() => {
+    if (dbStore.facade) {
+      dbStore.facade.content.get(videoId).then(res => {
+        if (isSuccess(res)) videoRecord = res.value;
+      });
+      
+      const pollFragments = async () => {
+        const res = await dbStore.facade!.knowledge.getFragmentsByType(videoId, 'chunk');
+        if (isSuccess(res) && res.value.length > 0) {
+          fragments = res.value;
+        } else {
+          setTimeout(pollFragments, 500);
+        }
+      };
+      
+      pollFragments();
+    }
+  });
 
   function handleTimeUpdate(e: Event) {
     const target = e.target as HTMLVideoElement;
@@ -54,7 +70,7 @@
         ></video>
       </div>
       <div class="mt-4">
-        <h1 class="text-2xl font-bold text-gray-900">Video Title (ID: {videoId})</h1>
+        <h1 class="text-2xl font-bold text-gray-900">{videoRecord?.title || `Video ID: ${videoId}`}</h1>
         <p class="text-gray-500 mt-1">Recorded on Local Platform</p>
       </div>
     </div>
@@ -63,7 +79,7 @@
     <div class="bg-white rounded-lg shadow p-4">
       <h2 class="text-lg font-semibold text-gray-900 mb-4">Transcript</h2>
       <TranscriptViewer 
-        fragments={mockFragments} 
+        {fragments} 
         {currentTime} 
         onSeek={handleSeek} 
       />
