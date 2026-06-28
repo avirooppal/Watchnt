@@ -11,6 +11,10 @@ export class IndexedDBSettingsStorage implements SettingsStorage {
     this.dbPromise = this.initDB();
   }
 
+  async init(): Promise<void> {
+    await this.dbPromise;
+  }
+
   private initDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       // In SSR or environments without indexedDB, fail gracefully
@@ -101,3 +105,5 @@ export class IndexedDBSettingsStorage implements SettingsStorage {
     }
   }
 }
+
+export { IndexedDBSettingsStorage as IndexedDBSettingsStore };
