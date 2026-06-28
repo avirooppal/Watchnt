@@ -44,12 +44,18 @@ importers:
       '@watchnt/models':
         specifier: workspace:*
         version: link:../../packages/models
+      '@watchnt/pipeline':
+        specifier: workspace:*
+        version: link:../../packages/pipeline
       '@watchnt/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@watchnt/storage':
         specifier: workspace:*
         version: link:../../packages/storage
+      '@watchnt/workers':
+        specifier: workspace:*
+        version: link:../../packages/workers
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1

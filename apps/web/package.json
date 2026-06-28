@@ -19,7 +19,9 @@
 	"dependencies": {
 		"@watchnt/shared": "workspace:*",
 		"@watchnt/storage": "workspace:*",
-		"@watchnt/models": "workspace:*"
+		"@watchnt/models": "workspace:*",
+		"@watchnt/pipeline": "workspace:*",
+		"@watchnt/workers": "workspace:*"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

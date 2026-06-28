@@ -1,15 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { dbStore } from '$lib/stores/db.svelte';
+  import { pipelineStore } from '$lib/stores/pipeline.svelte';
   import '../app.css';
   
   let { children } = $props();
 
   onMount(() => {
-    dbStore.init();
+    dbStore.init().then(() => {
+      pipelineStore.init();
+    });
     // Expose for E2E testing
     if (typeof window !== 'undefined') {
       (window as any).__dbStore = dbStore;
+      (window as any).__pipelineStore = pipelineStore;
     }
   });
 </script>

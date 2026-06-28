@@ -2,8 +2,8 @@
   let { video } = $props<{ video: any }>();
   
   // format duration
-  const mins = $derived(Math.floor(video.duration_ms / 60000));
-  const secs = $derived(Math.floor((video.duration_ms % 60000) / 1000));
+  const mins = $derived(Math.floor((video.duration_ms || 0) / 60000));
+  const secs = $derived(Math.floor(((video.duration_ms || 0) % 60000) / 1000));
   const durationStr = $derived(`${mins}:${secs.toString().padStart(2, '0')}`);
 </script>
 
