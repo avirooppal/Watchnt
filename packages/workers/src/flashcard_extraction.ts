@@ -1,17 +1,28 @@
-import { Worker, type EventBus } from '@watchnt/pipeline';
+import type { PipelineStep, ExecutionContext, PipelineEvent, EventBus } from '@watchnt/pipeline';
+import { createNoteId } from '@watchnt/shared';
 
-export class FlashcardExtractionWorker extends Worker {
-  constructor(bus: EventBus) {
-    super('FlashcardExtraction', bus);
-  }
+export class FlashcardExtractionStep implements PipelineStep {
+  name = 'FlashcardExtractionStep';
+  context: ExecutionContext = 'worker';
+  handles: PipelineEvent['type'][] = ['summary.ready'];
 
-  protected async process(contentId: string): Promise<void> {
-    this.updateProgress(contentId, 0);
-    
+  async execute(event: PipelineEvent, bus: EventBus): Promise<void> {
+    if (event.type !== 'summary.ready') return;
+    const { contentId } = event.payload;
+
+    await bus.publish({
+      type: 'job.started',
+      payload: { jobId: 'flashcard-' + contentId, stepName: this.name, contentId }
+    });
+
+    // Simulate progress
+    await bus.publish({
+      type: 'job.progress',
+      payload: { jobId: 'flashcard-' + contentId, stepName: this.name, progress: 50 }
+    });
+
     // Simulate latency for generating flashcards via LLM
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    this.updateProgress(contentId, 50);
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const mockedFlashcards = [
       {
@@ -24,19 +35,18 @@ export class FlashcardExtractionWorker extends Worker {
       }
     ];
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
     // Emit the flashcards.ready event
-    this.bus.publish({
+    await bus.publish({
       type: 'flashcards.ready',
       payload: {
         contentId,
         flashcards: mockedFlashcards
-      },
-      timestamp: Date.now(),
-      source: this.name
+      }
     });
 
-    this.updateProgress(contentId, 100);
+    await bus.publish({
+      type: 'job.completed',
+      payload: { jobId: 'flashcard-' + contentId, stepName: this.name, result: mockedFlashcards }
+    });
   }
 }

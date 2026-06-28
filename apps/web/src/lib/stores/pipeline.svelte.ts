@@ -1,5 +1,5 @@
 import { EventBus } from '@watchnt/pipeline';
-import { TranscriptionStep, EmbeddingStep, SummarizationStep, EntityExtractionStep, ProcessingCoordinator } from '@watchnt/workers';
+import { TranscriptionStep, EmbeddingStep, SummarizationStep, EntityExtractionStep, FlashcardExtractionStep, ProcessingCoordinator } from '@watchnt/workers';
 import { dbStore } from './db.svelte.js';
 import { createContentId } from '@watchnt/shared';
 
@@ -10,6 +10,7 @@ class PipelineStore {
   embedding: EmbeddingStep | null = null;
   summary: SummarizationStep | null = null;
   entity: EntityExtractionStep | null = null;
+  flashcard: FlashcardExtractionStep | null = null;
 
   init() {
     if (!dbStore.facade) throw new Error("DB not initialized");
@@ -21,12 +22,14 @@ class PipelineStore {
     this.embedding = new EmbeddingStep(this.bus);
     this.summary = new SummarizationStep(this.bus);
     this.entity = new EntityExtractionStep(this.bus);
+    this.flashcard = new FlashcardExtractionStep(this.bus);
     
     // Register steps to bus
     this.registerStep(this.transcription);
     this.registerStep(this.embedding);
     this.registerStep(this.summary);
     this.registerStep(this.entity);
+    this.registerStep(this.flashcard);
   }
 
   private registerStep(step: any) {
