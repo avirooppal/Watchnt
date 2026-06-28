@@ -1,11 +1,20 @@
 <script lang="ts">
   import LibraryGrid from '$lib/components/LibraryGrid.svelte';
+  import { dbStore } from '$lib/stores/db.svelte';
+  import { isSuccess } from '@watchnt/shared';
+  import { onMount } from 'svelte';
   
-  // Mock data for now, since we haven't wired ModelFacade in the UI yet
-  const videos = [
-    { id: 'vid-1', title: 'Example Video 1', thumbnail: '', duration_ms: 120000, created_at: Date.now() },
-    { id: 'vid-2', title: 'Example Video 2', thumbnail: '', duration_ms: 240000, created_at: Date.now() }
-  ];
+  let videos = $state<any[]>([]);
+
+  $effect(() => {
+    if (dbStore.facade) {
+      dbStore.facade.content.listByType('video').then(res => {
+        if (isSuccess(res)) {
+          videos = res.value;
+        }
+      });
+    }
+  });
 </script>
 
 <svelte:head>

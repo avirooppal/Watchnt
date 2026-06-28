@@ -80,4 +80,9 @@ export class ContentRepository {
     const query = `DELETE FROM content WHERE id = $1`;
     return this.db.execute(query, [id]);
   }
+
+  async listByType(type: string): Promise<Result<ContentRecord[]>> {
+    const query = `SELECT * FROM content WHERE type = $1 ORDER BY created_at DESC`;
+    return this.db.query<ContentRecord>(query, [type]);
+  }
 }

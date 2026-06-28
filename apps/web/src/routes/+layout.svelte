@@ -1,6 +1,17 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+  import { dbStore } from '$lib/stores/db.svelte';
   import '../app.css';
+  
   let { children } = $props();
+
+  onMount(() => {
+    dbStore.init();
+    // Expose for E2E testing
+    if (typeof window !== 'undefined') {
+      (window as any).__dbStore = dbStore;
+    }
+  });
 </script>
 
 <div class="min-h-screen bg-gray-50 text-gray-900">
