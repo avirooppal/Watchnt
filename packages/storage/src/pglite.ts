@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { vector } from '@electric-sql/pglite-pgvector';
 import { success, failure, type Result } from '@watchnt/shared';
 import type { RelationalStorage } from './interfaces.js';
 
@@ -17,7 +18,9 @@ export class PGLiteRelationalStorage implements RelationalStorage {
       this.db = txInstance;
       this.isTransaction = true;
     } else {
-      this.rootDb = new PGlite(dataDir || 'idb://watchnt-db');
+      this.rootDb = new PGlite(dataDir || 'idb://watchnt-db', {
+        extensions: { vector }
+      });
       this.db = this.rootDb;
       this.isTransaction = false;
     }

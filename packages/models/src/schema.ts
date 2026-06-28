@@ -60,3 +60,22 @@ export const noteAndKnowledgeSchemaMigration: Migration = {
     `);
   }
 };
+
+export const vectorSchemaMigration: Migration = {
+  version: 3,
+  name: 'init_vector_schema',
+  up: async (tx) => {
+    await tx.execute(`CREATE EXTENSION IF NOT EXISTS vector`);
+    
+    await tx.execute(`
+      CREATE TABLE embeddings (
+        id TEXT PRIMARY KEY,
+        content_id TEXT NOT NULL,
+        fragment_id TEXT,
+        embedding vector(384),
+        FOREIGN KEY(content_id) REFERENCES content(id) ON DELETE CASCADE,
+        FOREIGN KEY(fragment_id) REFERENCES knowledge_fragments(id) ON DELETE CASCADE
+      )
+    `);
+  }
+};
