@@ -9,10 +9,19 @@ import type {
   EntityObject
 } from '@watchnt/shared';
 
-// Canonical domain events
 export interface ContentCreatedEvent {
   type: 'content.created';
   payload: { content: Content };
+}
+
+export interface AssetsExtractedEvent {
+  type: 'assets.extracted';
+  payload: { contentId: ContentId; sessionId: string };
+}
+
+export interface LanguageDetectedEvent {
+  type: 'language.detected';
+  payload: { contentId: ContentId; language: string; confidence: number };
 }
 
 export interface AudioReadyEvent {
@@ -53,6 +62,16 @@ export interface ExportFinishedEvent {
 export interface FlashcardsReadyEvent {
   type: 'flashcards.ready';
   payload: { contentId: string; flashcards: { question: string; answer: string }[] };
+}
+
+export interface ActionItemsReadyEvent {
+  type: 'action_items.ready';
+  payload: { contentId: ContentId; actionItems: string[] };
+}
+
+export interface TopicClassifiedEvent {
+  type: 'topic.classified';
+  payload: { contentId: ContentId; topics: string[] };
 }
 
 export interface DiarizationReadyEvent {
@@ -96,7 +115,11 @@ export type PipelineEvent =
   | GraphUpdatedEvent
   | ExportFinishedEvent
   | FlashcardsReadyEvent
+  | ActionItemsReadyEvent
+  | TopicClassifiedEvent
   | DiarizationReadyEvent
+  | AssetsExtractedEvent
+  | LanguageDetectedEvent
   | JobStartedEvent
   | JobProgressEvent
   | JobCompletedEvent

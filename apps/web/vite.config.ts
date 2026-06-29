@@ -1,22 +1,29 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import tailwindcss from '@tailwindcss/vite';
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 
 export default defineConfig({
+	build: {
+		rollupOptions: {
+			input: {
+				background: 'src/background/index.ts',
+				content: 'src/content/index.ts'
+			}
+		}
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit({
 			compilerOptions: {
-				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-
-			// adapter-auto only supports some environments, see https://svelte.dev/docs/kit/adapter-auto for a list.
-			// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
-			// See https://svelte.dev/docs/kit/adapters for more information about adapters.
-			adapter: adapter(),
+			appDir: 'app',
+			adapter: adapter({
+				fallback: 'index.html',
+				strict: false
+			}),
 			alias: {
 				'@watchnt/shared': '../../packages/shared/src',
 				'@watchnt/ui': '../../packages/ui/src',
@@ -26,6 +33,7 @@ export default defineConfig({
 				'@watchnt/assets': '../../packages/assets/src',
 				'@watchnt/ai': '../../packages/ai/src',
 				'@watchnt/ingestion': '../../packages/ingestion/src',
+				'@watchnt/capture': '../../packages/capture/src',
 				'@watchnt/retrieval': '../../packages/retrieval/src',
 				'@watchnt/graph': '../../packages/graph/src',
 				'@watchnt/export': '../../packages/export/src',

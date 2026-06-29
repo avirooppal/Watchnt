@@ -6,6 +6,7 @@ export * from './repositories/vector.js';
 export * from './repositories/graph.js';
 export * from './repositories/backlinks.js';
 export * from './repositories/flashcards.js';
+export * from './repositories/capture.js';
 export * from './schema.js';
 export * from './services/search.js';
 export * from './services/graph.js';

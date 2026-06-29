@@ -1,47 +1,31 @@
-# Watch'nt
+# WatchNT: Universal Knowledge Capture & Memory System
 
 ## Project Overview
 
-Watch'nt is a browser-based, offline-first personal knowledge engine designed to ingest, process, and query multimedia content entirely on-device. The application operates client-side to build a local semantic database and knowledge graph from videos, podcasts, PDFs, screenshots, and web articles. Client-side privacy is guaranteed as all storage, processing pipeline steps, and inference are sandboxed locally.
+WatchNT is a browser-based, offline-first personal knowledge engine designed to automatically turn everything you watch, listen to, and discuss into organized notes, insights, action items, flashcards, semantic links, and searchable knowledge—without requiring you to manually take notes. 
+
+Operating primarily as a **Chrome Extension (MV3)** acting as a Universal Capture Layer, the application integrates directly into the browser to capture multimedia content on-device. Client-side privacy is guaranteed as all storage, processing pipeline steps, and inference are sandboxed locally via IndexedDB and SQLite WASM.
 
 ---
 
 ## Architectural Workflow and Event Architecture
 
-The core of Watch'nt is an asynchronous, event-driven pipeline coordinated by a decoupled event bus (`packages/pipeline`). Each step registers interest in specific event schemas and processes them inside Web Worker contexts to keep the main thread unblocked.
+The core of WatchNT is an asynchronous, event-driven pipeline coordinated by a decoupled event bus (`packages/pipeline`). Every source of knowledge is wrapped in a `CaptureSession`.
 
 ```
-[Import Layer] (Video, Audio, PDF, Screenshot, Article)
+[Knowledge Source] (YouTube, Meeting, PDF, Audio)
        │
        ▼
-  content.created
+[Capture Session]
        │
-       ├───────────────────────────────┐
-       ▼ (Video/Audio)                 ▼ (PDF/Screenshot/Article)
-  audio.ready                      OcrStep
-       │                               │
-       ▼                               ▼
-  TranscriptionStep               chunks.ready
-       │                               │
-       ▼                               ▼
-  transcript.ready                 EmbeddingStep
-       │                               │
-       ▼                               ▼
-  DiarizationStep                  embeddings.ready
-       │                               │
-       └──────────────┬────────────────┘
-                      ▼
-               [Storage Engine] (PGLite / IndexedDB)
-                      │
-                      ├───────────────────────────────┐
-                      ▼                               ▼
-              SummarizationStep               EntityExtractionStep
-                      │                               │
-                      ▼                               ▼
-                summary.ready                   graph.updated
-                      │
-                      ▼
-           FlashcardExtractionStep ──► flashcards.ready
+       ▼
+[Knowledge Assets] ──► (Transcription, OCR, Metadata)
+       │
+       ▼
+[Pipeline Engine] ──► (Summarization, Graph Linking, Embedding)
+       │
+       ▼
+[Storage Engine] ──► (PGLite / Vector Storage / Flashcards)
 ```
 
 ---
@@ -50,18 +34,14 @@ The core of Watch'nt is an asynchronous, event-driven pipeline coordinated by a 
 
 | Feature | Status | Implementation Details |
 |---|---|---|
+| Universal Browser Capture | Complete | Manifest V3 Extension capturing media across all domains (YouTube, HTML5, etc). |
 | Local Speech-to-Text | Complete | Quantized Whisper.cpp models running in isolated Web Workers. |
-| Hybrid Retrieval | Complete | Reciprocal Rank Fusion (RRF) combining cosine vector similarities with BM25 keyword rankings. |
+| Hybrid Retrieval | Complete | Reciprocal Rank Fusion (RRF) combining cosine vector similarities with BM25. |
 | Temporal Boosting | Complete | Time-decay multiplier prioritizing newer entries: `(1.0 + EXP(-age/30_days))`. |
-| Speaker Diarization | Complete | Heuristic pause speaker segmentation (>1500ms gap detection) with ONNX embedding hooks. |
 | Knowledge Graph | Complete | Extraction and mapping of entity relationships in a SQLite schema. |
-| Bidirectional Linking | Complete | Obsidian-style `[[wikilink]]` extraction to map related documents. |
-| Flashcard Generation | Complete | Automated extraction of study candidate cards mapped to spaced-repetition schedules. |
+| Flashcard Generation | Complete | Automated extraction of study candidate cards mapped to spaced-repetition. |
 | Grounded Chat (RAG) | Complete | Contextual Q&A builder with hybrid, vector-only, and FTS search modes. |
-| Multimodal OCR | Complete | Processing routes for PDF layouts, screenshots, and article markup. |
-| Plugin System | Complete | Sandboxed Web Worker plugin host with manifest-declared, permission-gated RPC bridge. |
-| Obsidian Vault Sync | Complete | Bidirectional sync with File System Access API and SHA-256 conflict detection. |
-| Secure BYOK | Complete | PBKDF2/AES-GCM encryption for client-provided API keys. |
+| Secure BYOK | Complete | Local IndexedDB storage for client-provided API keys (OpenAI). |
 
 ---
 
@@ -71,16 +51,12 @@ The project is structured as a monorepo workspace for logical boundaries:
 
 | Package | Workspace Name | Purpose |
 |---|---|---|
+| `@watchnt/capture` | `packages/capture` | Chrome extension providers for universal knowledge capture. |
 | `@watchnt/shared` | `packages/shared` | Branded identity types, Result wrappers, domain objects, and schemas. |
 | `@watchnt/storage` | `packages/storage` | PGLite (SQLite WASM) database driver, migration runner, settings store. |
 | `@watchnt/models` | `packages/models` | Database repositories and RAG `ContextBuilder` services. |
 | `@watchnt/pipeline` | `packages/pipeline` | Core event bus defining the pipeline execution lifecycle and event types. |
-| `@watchnt/workers` | `packages/workers` | Processing step definitions (Transcription, Embedding, Summarization, OCR, Diarization). |
-| `@watchnt/ai` | `packages/ai` | Interface layer for models and client-side encryption utilities. |
-| `@watchnt/plugins` | `packages/plugins` | Isolated Web Worker sandboxing and permission-gated RPC mediator. |
-| `@watchnt/obsidian` | `packages/obsidian` | Obsidian vault tracking, File System Access API watcher, and conflict resolution. |
-| `@watchnt/memory` | `packages/memory` | Interface seams for future episodic and semantic memory engines. |
-| **Web Client** | `apps/web` | SvelteKit progressive web application (PWA). |
+| **Web Extension** | `apps/web` | SvelteKit static PWA configured as an MV3 Chrome Extension. |
 
 ---
 
@@ -88,10 +64,7 @@ The project is structured as a monorepo workspace for logical boundaries:
 
 ### 1. Prerequisites
 - **Node.js**: Version `22.0.0` or higher.
-- **PNPM**: Package manager version `10.0.0` or higher. Install internationally:
-  ```bash
-  npm install -g pnpm
-  ```
+- **PNPM**: Package manager version `10.0.0` or higher. 
 
 ### 2. Dependency Resolution
 Clone the codebase and install dependencies across the workspace:

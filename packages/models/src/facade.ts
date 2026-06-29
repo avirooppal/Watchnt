@@ -7,7 +7,8 @@ import { VectorRepository } from './repositories/vector.js';
 import { GraphRepository } from './repositories/graph.js';
 import { BacklinkRepository } from './repositories/backlinks.js';
 import { FlashcardRepository } from './repositories/flashcards.js';
-import { initialSchemaMigration, noteAndKnowledgeSchemaMigration, vectorSchemaMigration, graphSchemaMigration, backlinksSchemaMigration, flashcardsSchemaMigration, hybridSearchSchemaMigration } from './schema.js';
+import { CaptureRepository } from './repositories/capture.js';
+import { initialSchemaMigration, noteAndKnowledgeSchemaMigration, vectorSchemaMigration, graphSchemaMigration, backlinksSchemaMigration, flashcardsSchemaMigration, hybridSearchSchemaMigration, captureSessionSchemaMigration } from './schema.js';
 import { type Result } from '@watchnt/shared';
 
 import { NotesService } from './services/notes.js';
@@ -20,6 +21,7 @@ export class ModelFacade {
   public graph: GraphRepository;
   public backlinks: BacklinkRepository;
   public flashcards: FlashcardRepository;
+  public capture: CaptureRepository;
   
   public notesService: NotesService;
   
@@ -31,6 +33,7 @@ export class ModelFacade {
     this.graph = new GraphRepository(this.db);
     this.backlinks = new BacklinkRepository(this.db);
     this.flashcards = new FlashcardRepository(this.db);
+    this.capture = new CaptureRepository(this.db);
 
     this.notesService = new NotesService(this);
   }
@@ -43,7 +46,8 @@ export class ModelFacade {
       graphSchemaMigration,
       backlinksSchemaMigration,
       flashcardsSchemaMigration,
-      hybridSearchSchemaMigration
+      hybridSearchSchemaMigration,
+      captureSessionSchemaMigration
     ]);
     return runner.runMigrations();
   }

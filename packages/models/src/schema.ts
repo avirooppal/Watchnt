@@ -201,3 +201,39 @@ export const hybridSearchSchemaMigration: Migration = {
     `);
   }
 };
+
+export const captureSessionSchemaMigration: Migration = {
+  version: 8,
+  name: 'init_capture_session_schema',
+  up: async (tx) => {
+    await tx.execute(`
+      CREATE TABLE capture_sessions (
+        id TEXT PRIMARY KEY,
+        source_type TEXT NOT NULL,
+        source_url TEXT,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        progress INTEGER NOT NULL DEFAULT 0,
+        started_at BIGINT NOT NULL,
+        ended_at BIGINT,
+        error TEXT,
+        metadata TEXT,
+        content_id TEXT,
+        FOREIGN KEY(content_id) REFERENCES content(id) ON DELETE SET NULL
+      )
+    `);
+
+    await tx.execute(`
+      CREATE TABLE knowledge_assets (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        data TEXT NOT NULL,
+        metadata TEXT,
+        created_at BIGINT NOT NULL,
+        FOREIGN KEY(session_id) REFERENCES capture_sessions(id) ON DELETE CASCADE
+      )
+    `);
+  }
+};
+

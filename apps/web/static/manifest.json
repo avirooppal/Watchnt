@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "WatchNT - Universal Knowledge Capture",
+  "version": "1.0.0",
+  "description": "Automatically capture and organize knowledge from any website without manual note-taking.",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "all_frames": false
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabCapture",
+    "offscreen",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "commands": {
+    "start-capture": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Start WatchNT Capture"
+    },
+    "pause-capture": {
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
+      "description": "Pause Capture"
+    },
+    "open-watchnt": {
+      "suggested_key": {
+        "default": "Alt+Shift+W"
+      },
+      "description": "Open WatchNT Dashboard"
+    }
+  }
+}
