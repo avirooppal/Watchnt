@@ -8,6 +8,36 @@
   import { onMount } from 'svelte';
   
   let videos = $state<any[]>([]);
+  let groupedVideos = $derived.by(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const aWeekAgo = new Date(today);
+    aWeekAgo.setDate(aWeekAgo.getDate() - 7);
+
+    const groups = {
+      today: [] as any[],
+      yesterday: [] as any[],
+      thisWeek: [] as any[],
+      older: [] as any[]
+    };
+
+    for (const v of videos) {
+      const d = new Date(v.created_at);
+      if (d >= today) {
+        groups.today.push(v);
+      } else if (d >= yesterday) {
+        groups.yesterday.push(v);
+      } else if (d >= aWeekAgo) {
+        groups.thisWeek.push(v);
+      } else {
+        groups.older.push(v);
+      }
+    }
+    return groups;
+  });
+
   let fileInput = $state<HTMLInputElement>();
   let isPopup = $state(false);
   let mounted = $state(false);
@@ -23,7 +53,7 @@
 
   $effect(() => {
     if (dbStore.settings && loadingSettings) {
-      dbStore.settings.get('openai_api_key').then((res) => {
+      dbStore.settings.get('ai_provider').then((res) => {
         if (isSuccess(res) && res.value) {
           isConfigured = true;
         }
@@ -34,7 +64,8 @@
     if (dbStore.facade && !isPopup) {
       dbStore.facade.content.listByType('video').then(res => {
         if (isSuccess(res)) {
-          videos = res.value;
+          // Sort newest first
+          videos = res.value.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         }
       });
     }
@@ -49,7 +80,9 @@
         // Refresh the list after pipeline starts
         if (dbStore.facade) {
           const res = await dbStore.facade.content.listByType('video');
-          if (isSuccess(res)) videos = res.value;
+          if (isSuccess(res)) {
+            videos = res.value.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          }
         }
       } catch (err) {
         console.error('Failed to upload', err);
@@ -70,7 +103,7 @@
       <Onboarding onComplete={() => (isConfigured = true)} />
     {/if}
   {:else}
-    <div class="px-4 sm:px-0">
+    <div class="px-4 sm:px-0 pb-12">
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-white tracking-tight">My Library</h1>
         <div class="flex items-center space-x-4">
@@ -78,7 +111,7 @@
             <svg class="-ml-1 mr-2 h-5 w-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             Review Flashcards
           </a>
-          <input type="file" accept="video/webm,video/mp4" class="hidden" bind:this={fileInput} onchange={handleUpload} />
+          <input type="file" accept="video/webm,video/mp4,audio/*,.pdf" class="hidden" bind:this={fileInput} onchange={handleUpload} />
           <button 
             onclick={() => fileInput.click()}
             class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-500 transition-all font-medium shadow-lg hover:shadow-indigo-500/25 border border-indigo-500/30 flex items-center gap-2"
@@ -89,7 +122,36 @@
         </div>
       </div>
       
-      <LibraryGrid {videos} />
+      {#if videos.length === 0}
+        <LibraryGrid videos={[]} />
+      {:else}
+        <div class="space-y-12">
+          {#if groupedVideos.today.length > 0}
+            <div>
+              <h2 class="text-xl font-semibold text-slate-200 mb-4 tracking-tight">Today</h2>
+              <LibraryGrid videos={groupedVideos.today} />
+            </div>
+          {/if}
+          {#if groupedVideos.yesterday.length > 0}
+            <div>
+              <h2 class="text-xl font-semibold text-slate-200 mb-4 tracking-tight">Yesterday</h2>
+              <LibraryGrid videos={groupedVideos.yesterday} />
+            </div>
+          {/if}
+          {#if groupedVideos.thisWeek.length > 0}
+            <div>
+              <h2 class="text-xl font-semibold text-slate-200 mb-4 tracking-tight">This Week</h2>
+              <LibraryGrid videos={groupedVideos.thisWeek} />
+            </div>
+          {/if}
+          {#if groupedVideos.older.length > 0}
+            <div>
+              <h2 class="text-xl font-semibold text-slate-200 mb-4 tracking-tight">Older</h2>
+              <LibraryGrid videos={groupedVideos.older} />
+            </div>
+          {/if}
+        </div>
+      {/if}
     </div>
   {/if}
 {/if}

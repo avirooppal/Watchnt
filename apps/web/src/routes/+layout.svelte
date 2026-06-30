@@ -45,12 +45,19 @@
             </div>
             <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">WatchNT</span>
           </a>
-          <nav class="ml-10 flex gap-1">
+          <div class="ml-10 flex-1 max-w-lg hidden sm:block relative group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="h-5 w-5 text-slate-500 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <input type="text" placeholder="Ask WatchNT..." class="block w-full pl-10 pr-3 py-2 border border-white/10 rounded-xl leading-5 bg-slate-900/50 text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-slate-900 sm:text-sm transition-all shadow-inner">
+            <div class="absolute inset-y-0 right-0 pr-2 flex items-center">
+              <kbd class="hidden sm:inline-block border border-slate-700 rounded px-2 text-xs font-sans font-medium text-slate-500 bg-slate-800">⌘K</kbd>
+            </div>
+          </div>
+
+          <nav class="ml-auto flex gap-1">
             {#each [
               { href: '/library', label: 'Library' },
-              { href: '/search', label: 'Search' },
-              { href: '/chat', label: 'Chat' },
-              { href: '/graph', label: 'Graph' },
               { href: '/flashcards', label: 'Flashcards' },
               { href: '/settings', label: 'Settings' }
             ] as link}
