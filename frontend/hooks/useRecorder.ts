@@ -5,6 +5,7 @@ import { useState, useCallback, useRef } from 'react';
 export const useRecorder = (stream: MediaStream | null) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -13,6 +14,7 @@ export const useRecorder = (stream: MediaStream | null) => {
     
     chunksRef.current = [];
     setAudioUrl(null);
+    setAudioBlob(null);
 
     const mediaRecorder = new MediaRecorder(stream);
     mediaRecorderRef.current = mediaRecorder;
@@ -28,6 +30,7 @@ export const useRecorder = (stream: MediaStream | null) => {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
+      setAudioBlob(blob);
     };
 
     mediaRecorder.start();
@@ -41,5 +44,5 @@ export const useRecorder = (stream: MediaStream | null) => {
     }
   }, [isRecording]);
 
-  return { isRecording, startRecording, stopRecording, audioUrl };
+  return { isRecording, startRecording, stopRecording, audioUrl, audioBlob };
 };

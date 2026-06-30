@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "WatchNT AI",
+  "version": "1.0.0",
+  "description": "Privacy-first AI Meeting Copilot",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "options_ui": {
+    "page": "dashboard.html",
+    "open_in_tab": true
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://meet.google.com/*", "*://*.zoom.us/wc/*", "*://teams.microsoft.com/*"],
+      "js": ["src/content/index.tsx"]
+    }
+  ],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabCapture",
+    "scripting",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ]
+}
