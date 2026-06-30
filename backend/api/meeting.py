@@ -20,3 +20,7 @@ def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_meeting)
     return db_meeting
+
+@router.get("/meetings", response_model=list[MeetingResponse])
+def get_meetings(db: Session = Depends(get_db)):
+    return db.query(Meeting).all()
