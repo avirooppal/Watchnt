@@ -5,7 +5,7 @@ import { useRecorder } from '../hooks/useRecorder';
 
 export default function Home() {
   const { stream, error, requestPermission } = useMicrophone();
-  const { isRecording, startRecording, stopRecording } = useRecorder(stream);
+  const { isRecording, startRecording, stopRecording, audioUrl } = useRecorder(stream);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -42,6 +42,16 @@ export default function Home() {
                   Stop Recording
                 </button>
               </div>
+            )}
+
+            {audioUrl && !isRecording && (
+              <a 
+                href={audioUrl} 
+                download="recording.webm"
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition mt-4 text-center block"
+              >
+                Download Audio
+              </a>
             )}
           </div>
         )}
