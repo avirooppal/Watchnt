@@ -23,3 +23,5 @@ meetings/*/actions.json
 # OS
 .DS_Store
 Thumbs.db
+data/
+test_audio.wav

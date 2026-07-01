@@ -1,4 +1,3 @@
-
 chrome.runtime.onMessage.addListener((message: any, _sender: any, _sendResponse: any) => {
   if (message.type === 'START_RECORDING_WITH_STREAM') {
     startOffscreenRecording(message.payload.streamId);
@@ -9,27 +8,40 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, _sendResponse:
     chrome.action.setBadgeText({ text: 'ON' });
     chrome.action.setBadgeBackgroundColor({ color: '#16a34a' });
   } else if (message.type === 'RECORDING_UPLOADED') {
-    chrome.storage.local.set({ isUploading: false });
-    triggerAiPipeline(message.payload.meetingId);
-    chrome.offscreen.closeDocument();
+    pollPipelineStatus(message.payload.meetingId);
   } else if (message.type === 'RECORDING_UPLOAD_FAILED') {
-    chrome.storage.local.set({ isUploading: false });
+    chrome.storage.local.set({ isUploading: false, pipelineStatus: 'FAILED' });
     chrome.offscreen.closeDocument();
   }
 });
 
-async function triggerAiPipeline(meetingId: string) {
-  try {
-    // Transcribe
-    await fetch(`http://localhost:8000/transcribe/${meetingId}`, { method: 'POST' });
-    // Summary & Actions
-    await Promise.all([
-      fetch(`http://localhost:8000/summary/${meetingId}`, { method: 'POST' }),
-      fetch(`http://localhost:8000/actions/${meetingId}`, { method: 'POST' })
-    ]);
-    console.log("AI pipeline complete for", meetingId);
-  } catch (err) {
-    console.error("AI pipeline failed:", err);
+async function pollPipelineStatus(meetingId: string) {
+  let isDone = false;
+  
+  while (!isDone) {
+    try {
+      const res = await fetch(`http://localhost:8000/meeting/${meetingId}/status`);
+      const data = await res.json();
+      
+      chrome.storage.local.set({ pipelineStatus: data.status });
+      
+      if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+        isDone = true;
+        chrome.storage.local.set({ isUploading: false });
+        try {
+          await chrome.offscreen.closeDocument();
+        } catch (e) {
+          // might already be closed
+        }
+      } else {
+        // Wait 2 seconds before polling again
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (err) {
+      console.error("Polling failed:", err);
+      // Wait and retry
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
   }
 }
 
@@ -48,20 +60,18 @@ async function startOffscreenRecording(streamId: string) {
     payload: { streamId }
   });
   
-  chrome.storage.local.set({ isRecording: true });
+  chrome.storage.local.set({ isRecording: true, pipelineStatus: 'RECORDING' });
   
   chrome.action.setBadgeText({ text: 'REC' });
   chrome.action.setBadgeBackgroundColor({ color: '#dc2626' }); // red
 }
 
 async function stopRecording() {
-  // Always attempt to stop the offscreen document, even if the service worker 
-  // just woke up and its memory state is reset.
   chrome.runtime.sendMessage({
     type: 'OFFSCREEN_STOP_RECORDING'
   });
   
-  chrome.storage.local.set({ isRecording: false, isUploading: true });
+  chrome.storage.local.set({ isRecording: false, isUploading: true, pipelineStatus: 'UPLOADING' });
   
   chrome.action.setBadgeText({ text: 'ON' });
   chrome.action.setBadgeBackgroundColor({ color: '#16a34a' });

@@ -8,4 +8,6 @@ class Meeting(Base):
 
     id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     title = Column(String, index=True)
+    status = Column(String, default="RECORDING")
+    job_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

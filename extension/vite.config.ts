@@ -10,4 +10,11 @@ export default defineConfig({
     react(),
     crx({ manifest }),
   ],
+  build: {
+    rollupOptions: {
+      input: {
+        offscreen: 'offscreen.html'
+      }
+    }
+  }
 })

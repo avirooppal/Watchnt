@@ -8,6 +8,9 @@ from api.summary import router as summary_router
 from api.actions import router as actions_router
 from api.email import router as email_router
 from api.realtime import router as realtime_router
+from database.db import init_db
+
+init_db()
 
 app = FastAPI()
 

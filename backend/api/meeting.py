@@ -76,5 +76,17 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
                 data["actions"] = json.load(f)
             except:
                 data["actions"] = f.read()
+
+    email_path = os.path.join(meeting_dir, "email.html")
+    if os.path.exists(email_path):
+        with open(email_path, "r", encoding="utf-8") as f:
+            data["email"] = f.read()
                 
     return data
+
+@router.get("/meeting/{meeting_id}/status")
+def get_meeting_status(meeting_id: str, db: Session = Depends(get_db)):
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        return {"error": "Meeting not found"}
+    return {"status": meeting.status, "job_id": meeting.job_id}

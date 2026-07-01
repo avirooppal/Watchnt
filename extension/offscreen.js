@@ -67,13 +67,12 @@ async function uploadAudio(blob) {
     formData.append('meeting_id', meeting.id);
     formData.append('file', blob, 'audio.webm');
     
-    await fetch('http://localhost:8000/upload', {
+    const uploadRes = await fetch('http://localhost:8000/upload', {
       method: 'POST',
       body: formData
     });
     
-    // 3. Trigger Transcribe & Summary (could be handled by background or backend automatically)
-    // We'll tell the background to trigger them for better architecture
+    // Send background success and the meeting id to start polling
     chrome.runtime.sendMessage({ 
       type: 'RECORDING_UPLOADED', 
       payload: { meetingId: meeting.id } 

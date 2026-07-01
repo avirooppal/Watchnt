@@ -4,3 +4,4 @@ pydantic-settings
 sqlalchemy
 python-multipart
 faster-whisper
+httpx

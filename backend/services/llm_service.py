@@ -1,10 +1,11 @@
 import httpx
 import json
+import os
 
 class LLMService:
     def __init__(self, provider: str = "ollama"):
         self.provider = provider
-        self.ollama_url = "http://localhost:11434/api/generate"
+        self.ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
         self.model = "llama3" # Default Ollama model to use
 
     async def generate_response(self, prompt: str) -> str:
@@ -75,9 +76,28 @@ Transcript:
             validated_items = [ActionItem(**item).dict() for item in items]
             return json.dumps(validated_items)
         except Exception as e:
-            # If validation fails, return the raw response or empty array
+            # If validation fails, raise an error
             print(f"Action item validation failed: {e}")
-            return response_text
+            raise ValueError(f"Failed to extract valid Action Items JSON: {e}")
+            
+    async def generate_email(self, summary: str, actions_json_str: str) -> str:
+        prompt = f"""Draft a professional follow-up email for the meeting based on the summary and action items below.
+Format the output as valid HTML that can be directly embedded in an email body. Do not wrap it in markdown code blocks.
+
+Summary:
+{summary}
+
+Action Items:
+{actions_json_str}
+"""
+        response_text = await self.generate_response(prompt)
+        
+        # Clean possible markdown
+        clean_text = response_text.strip()
+        if clean_text.startswith("```html"): clean_text = clean_text[7:]
+        if clean_text.startswith("```"): clean_text = clean_text[3:]
+        if clean_text.endswith("```"): clean_text = clean_text[:-3]
+        return clean_text.strip()
 
 if __name__ == "__main__":
     import asyncio

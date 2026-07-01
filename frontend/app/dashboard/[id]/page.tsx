@@ -1,145 +1,168 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 export default function MeetingDetail() {
-  const params = useParams();
-  const meetingId = params.id as string;
-  
+  const { id } = useParams();
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'summary' | 'actions' | 'transcript' | 'email'>('summary');
 
   useEffect(() => {
-    fetch(`http://localhost:8000/meeting/${meetingId}`)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${apiUrl}/meeting/${id}`)
       .then(res => res.json())
-      .then(json => {
-        setData(json);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [meetingId]);
+      .then(resData => setData(resData))
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [id]);
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!data) return <div className="p-8">Meeting not found.</div>;
-
-  return (
-    <div className="min-h-screen p-8 max-w-5xl mx-auto font-sans text-gray-800">
-      <div className="mb-6">
-        <Link href="/dashboard" className="text-blue-600 hover:underline">&larr; Back to Dashboard</Link>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
-      
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">{data.metadata?.title || 'Meeting'}</h1>
-          <p className="text-gray-500">
-            {data.metadata?.created_at ? new Date(data.metadata.created_at).toLocaleString() : ''}
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowEmailModal(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
-        >
-          Email Summary
+    );
+  }
+
+  if (!data || data.error) {
+    return (
+      <div className="text-center py-20 text-red-400">
+        <h2 className="text-xl">Meeting not found</h2>
+        <button onClick={() => router.push('/dashboard')} className="mt-4 text-indigo-400 hover:text-indigo-300">
+          Return to Dashboard
         </button>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          {/* Summary */}
-          {data.summary && (
-            <div className="bg-white p-6 rounded shadow border border-gray-100">
-              <h2 className="text-2xl font-bold mb-4">Summary</h2>
-              <div className="whitespace-pre-wrap">{data.summary}</div>
-            </div>
-          )}
-          
-          {/* Transcript */}
-          {data.transcript?.segments && (
-            <div className="bg-white p-6 rounded shadow border border-gray-100">
-              <h2 className="text-2xl font-bold mb-4">Transcript</h2>
-              <div className="max-h-96 overflow-y-auto space-y-4">
-                {data.transcript.segments.map((seg: any, idx: number) => (
-                  <p key={idx}>
-                    <span className="text-gray-400 text-sm mr-2">[{seg.start.toFixed(1)}s]</span>
-                    {seg.text}
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+  const { metadata, summary, actions, transcript, email } = data;
 
+  const tabs = [
+    { id: 'summary', label: 'Summary' },
+    { id: 'actions', label: 'Action Items' },
+    { id: 'transcript', label: 'Transcript' },
+    { id: 'email', label: 'Email Draft' }
+  ];
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={() => router.push('/dashboard')}
+          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-slate-300"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
         <div>
-          {/* Actions */}
-          {data.actions && data.actions.length > 0 && (
-            <div className="bg-white p-6 rounded shadow border border-gray-100">
-              <h2 className="text-2xl font-bold mb-4">Action Items</h2>
-              <ul className="space-y-4">
-                {data.actions.map((action: any, idx: number) => {
-                  if (typeof action === 'string') {
-                    // Backwards compatibility for old flat strings
-                    return <li key={idx} className="flex gap-2"><span>&bull;</span><span>{action}</span></li>;
-                  }
-                  
-                  // New structured format
-                  return (
-                    <li key={idx} className="p-3 bg-gray-50 rounded border border-gray-100 text-sm">
-                      <div className="font-semibold mb-1">{action.task}</div>
-                      <div className="grid grid-cols-2 gap-2 text-gray-600 mt-2">
-                        <div><span className="text-gray-400">Owner:</span> {action.owner}</div>
-                        <div><span className="text-gray-400">Due:</span> {action.deadline}</div>
-                      </div>
-                      <div className="mt-2">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          action.priority === 'High' ? 'bg-red-100 text-red-700' :
-                          action.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
+          <h2 className="text-3xl font-bold tracking-tight text-white">{metadata?.title || 'Meeting Detail'}</h2>
+          <p className="text-sm text-slate-400 mt-1">
+            {metadata?.created_at ? new Date(metadata.created_at).toLocaleString() : 'Unknown Date'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 p-1 bg-slate-900/50 backdrop-blur border border-white/5 rounded-xl w-fit">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === tab.id 
+                ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 min-h-[500px]">
+        {activeTab === 'summary' && (
+          <div className="prose prose-invert prose-indigo max-w-none">
+            {summary ? (
+              <div dangerouslySetInnerHTML={{ __html: summary.replace(/\n/g, '<br/>') }} />
+            ) : (
+              <p className="text-slate-500">No summary available yet.</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'actions' && (
+          <div className="space-y-4">
+            {!actions || actions.length === 0 ? (
+              <p className="text-slate-500">No action items extracted.</p>
+            ) : typeof actions === 'string' ? (
+              <p className="text-slate-300">{actions}</p>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {actions.map((action: any, i: number) => (
+                  <div key={i} className="p-4 rounded-xl bg-slate-900/50 border border-white/5 flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <span className="font-medium text-white">{action.task}</span>
+                      {action.priority && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          action.priority.toLowerCase() === 'high' ? 'bg-red-500/10 text-red-400' :
+                          action.priority.toLowerCase() === 'medium' ? 'bg-yellow-500/10 text-yellow-400' :
+                          'bg-emerald-500/10 text-emerald-400'
                         }`}>
                           {action.priority}
                         </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showEmailModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4">Send Email</h2>
-            <p className="mb-4 text-gray-600">The meeting summary and action items will be sent via SMTP.</p>
-            <input type="email" placeholder="recipient@example.com" className="w-full p-2 border rounded mb-4" id="emailInput" />
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowEmailModal(false)} className="px-4 py-2 bg-gray-200 rounded text-gray-800">Cancel</button>
-              <button onClick={async () => {
-                const email = (document.getElementById('emailInput') as HTMLInputElement).value;
-                if (!email) return;
-                try {
-                  await fetch(`http://localhost:8000/email/${meetingId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to_email: email })
-                  });
-                  alert('Email sent successfully!');
-                  setShowEmailModal(false);
-                } catch (e) {
-                  alert('Error sending email');
-                }
-              }} className="px-4 py-2 bg-blue-600 text-white rounded">Send</button>
-            </div>
+                      )}
+                    </div>
+                    <div className="flex gap-4 text-sm text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        {action.owner}
+                      </span>
+                      {action.deadline && action.deadline.toLowerCase() !== 'none' && (
+                        <span className="flex items-center gap-1 text-rose-400/80">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          {action.deadline}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {activeTab === 'transcript' && (
+          <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {!transcript || !transcript.segments ? (
+              <p className="text-slate-500">No transcript available.</p>
+            ) : (
+              transcript.segments.map((segment: any, i: number) => (
+                <div key={i} className="flex gap-4 group">
+                  <div className="w-24 shrink-0 text-right text-xs font-medium text-slate-500 pt-1 group-hover:text-indigo-400 transition-colors">
+                    {Math.floor(segment.start / 60)}:{(Math.floor(segment.start % 60)).toString().padStart(2, '0')}
+                  </div>
+                  <div className="text-slate-300 group-hover:text-white transition-colors">
+                    {segment.text}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === 'email' && (
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            {email ? (
+              <div dangerouslySetInnerHTML={{ __html: email }} className="prose max-w-none" />
+            ) : (
+              <p className="text-slate-500">Email draft not generated yet.</p>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
