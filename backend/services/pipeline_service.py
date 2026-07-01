@@ -1,7 +1,7 @@
 import asyncio
 import os
 import json
-from services.whisper_service import WhisperService
+from services.transcription_service import TranscriptionService
 from services.llm_service import LLMService
 from services.email_service import EmailService
 from database.db import SessionLocal
@@ -13,7 +13,7 @@ MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
 
 class PipelineService:
     def __init__(self):
-        self.whisper_service = WhisperService()
+        self.transcription_service = TranscriptionService()
         self.llm_service = LLMService()
         self.email_service = EmailService()
 
@@ -40,7 +40,7 @@ class PipelineService:
         try:
             # 1. TRANSCRIBING
             self.update_status(meeting_id, MeetingStatus.TRANSCRIBING.value)
-            segments = await asyncio.to_thread(self.whisper_service.transcribe, audio_path)
+            segments = await asyncio.to_thread(self.transcription_service.transcribe, audio_path)
             
             transcript_path = os.path.join(meeting_dir, "transcript.json")
             with open(transcript_path, "w", encoding="utf-8") as f:

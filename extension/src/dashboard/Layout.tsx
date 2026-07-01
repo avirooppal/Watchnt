@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
+import { Link, Outlet } from 'react-router-dom';
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function Layout() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 selection:bg-indigo-500/30">
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
@@ -21,14 +21,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </h1>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium text-slate-400">
-            <a href="/dashboard" className="hover:text-white transition-colors">Meetings</a>
-            <a href="/dashboard/settings" className="hover:text-white transition-colors">Settings</a>
+            <Link to="/" className="hover:text-white transition-colors">Meetings</Link>
+            <Link to="/settings" className="hover:text-white transition-colors">Settings</Link>
           </nav>
         </div>
       </header>
       
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {children}
+        <Outlet />
       </main>
     </div>
   );

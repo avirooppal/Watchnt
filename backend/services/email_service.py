@@ -62,7 +62,12 @@ class EmailService:
         if not self.host or not self.user or not self.password:
             raise ValueError("SMTP configuration is missing in .env")
             
-        html_content = self.generate_template(meeting_id)
+        email_path = os.path.join(MEETINGS_DIR, meeting_id, "email.html")
+        if os.path.exists(email_path):
+            with open(email_path, "r", encoding="utf-8") as f:
+                html_content = f.read()
+        else:
+            html_content = self.generate_template(meeting_id)
         
         msg = EmailMessage()
         msg['Subject'] = f"Meeting Summary - {meeting_id}"

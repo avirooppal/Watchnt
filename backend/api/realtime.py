@@ -1,10 +1,11 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from services.whisper_service import WhisperService
+from services.transcription_service import TranscriptionService
+from services.llm_service import LLMService
 import tempfile
 import os
 
 router = APIRouter()
-whisper_service = WhisperService()
+transcription_service = TranscriptionService()
 
 @router.websocket("/ws/transcribe")
 async def websocket_endpoint(websocket: WebSocket):
@@ -33,13 +34,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 # We could transcribe just the chunk, but Whisper expects a valid audio file.
                 # Accumulating and transcribing the whole thing is simpler for this MVP.
                 # A more advanced approach would use a sliding window or a streaming audio format.
-                segments = whisper_service.transcribe(temp_audio_path)
-                
-                # We just need the text of the latest transcription
-                full_text = " ".join([seg["text"] for seg in segments])
-                
-                # Send the partial/live transcript back
-                await websocket.send_json({"transcript": full_text})
+                segments = transcription_service.transcribe(temp_audio_path)
+                if segments:
+                    # We just need the text of the latest transcription
+                    full_text = " ".join([seg["text"] for seg in segments])
+                    
+                    # Send the partial/live transcript back
+                    await websocket.send_json({"transcript": full_text})
                 
             except Exception as e:
                 print(f"Transcription error: {e}")

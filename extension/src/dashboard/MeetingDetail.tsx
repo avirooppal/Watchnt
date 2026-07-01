@@ -1,17 +1,15 @@
-'use client';
-
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useNavigate } from 'react-router-dom';
 
 export default function MeetingDetail() {
   const { id } = useParams();
-  const router = useRouter();
+  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'summary' | 'actions' | 'transcript' | 'email'>('summary');
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const apiUrl = 'http://localhost:8000';
     fetch(`${apiUrl}/meeting/${id}`)
       .then(res => res.json())
       .then(resData => setData(resData))
@@ -31,7 +29,7 @@ export default function MeetingDetail() {
     return (
       <div className="text-center py-20 text-red-400">
         <h2 className="text-xl">Meeting not found</h2>
-        <button onClick={() => router.push('/dashboard')} className="mt-4 text-indigo-400 hover:text-indigo-300">
+        <button onClick={() => navigate('/')} className="mt-4 text-indigo-400 hover:text-indigo-300">
           Return to Dashboard
         </button>
       </div>
@@ -51,7 +49,7 @@ export default function MeetingDetail() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex items-center gap-4">
         <button 
-          onClick={() => router.push('/dashboard')}
+          onClick={() => navigate('/')}
           className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-slate-300"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -156,7 +154,7 @@ export default function MeetingDetail() {
         {activeTab === 'email' && (
           <div className="bg-white rounded-lg p-6 shadow-xl">
             {email ? (
-              <div dangerouslySetInnerHTML={{ __html: email }} className="prose max-w-none" />
+              <div dangerouslySetInnerHTML={{ __html: email }} className="prose max-w-none text-slate-900" />
             ) : (
               <p className="text-slate-500">Email draft not generated yet.</p>
             )}

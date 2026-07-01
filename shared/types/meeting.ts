@@ -1,4 +1,4 @@
-import { MeetingStatus } from './status';
+import type { MeetingStatus } from './status';
 
 export interface Meeting {
   id: string;

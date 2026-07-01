@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException
 import os
 import json
-from services.whisper_service import WhisperService
+from services.transcription_service import TranscriptionService
 
 router = APIRouter()
-whisper_service = WhisperService()
+transcription_service = TranscriptionService()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
@@ -18,7 +18,7 @@ async def transcribe_audio(meeting_id: str):
         raise HTTPException(status_code=404, detail="Audio file not found for this meeting")
         
     try:
-        segments = whisper_service.transcribe(audio_path)
+        segments = transcription_service.transcribe(audio_path)
         
         # Save transcript.json
         transcript_path = os.path.join(meeting_dir, "transcript.json")

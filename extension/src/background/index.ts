@@ -12,6 +12,8 @@ chrome.runtime.onMessage.addListener((message: any, _sender: any, _sendResponse:
   } else if (message.type === 'RECORDING_UPLOAD_FAILED') {
     chrome.storage.local.set({ isUploading: false, pipelineStatus: 'FAILED' });
     chrome.offscreen.closeDocument();
+  } else if (message.type === 'OPEN_DASHBOARD') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
   }
 });
 

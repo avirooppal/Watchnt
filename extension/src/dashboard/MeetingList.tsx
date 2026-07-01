@@ -1,17 +1,15 @@
-'use client';
-
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Meeting } from '../../../shared/types/meeting';
+import { Link } from 'react-router-dom';
+import type { Meeting } from '../../../shared/types/meeting';
 
-export default function DashboardPage() {
+export default function MeetingList() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchMeetings = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = 'http://localhost:8000';
         const res = await fetch(`${apiUrl}/meetings`);
         const data = await res.json();
         // Sort newest first
@@ -71,7 +69,7 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {meetings.map((meeting) => (
-            <Link href={`/dashboard/${meeting.id}`} key={meeting.id}>
+            <Link to={`/meeting/${meeting.id}`} key={meeting.id} className="block h-full">
               <div className="group relative h-full flex flex-col justify-between p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 cursor-pointer overflow-hidden">
                 
                 {/* Glassmorphism gradient effect on hover */}

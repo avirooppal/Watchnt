@@ -117,32 +117,6 @@ Returns JSON.
 
 ---
 
-## Task 0.5 — Create Frontend
-
-### Goal
-
-Initialize Next.js.
-
-### Do
-
-Install
-
-- Next.js
-- Tailwind
-
-Create homepage.
-
-### Test
-
-Visit
-
-```
-localhost:3000
-```
-
-Homepage loads.
-
----
 
 # Phase 1 — Backend Foundation
 
