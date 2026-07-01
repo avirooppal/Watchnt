@@ -1,3 +1,9 @@
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === chrome.runtime.OnInstalledReason.INSTALL) {
+    chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/onboarding') });
+  }
+});
+
 chrome.runtime.onMessage.addListener((message: any, _sender: any, _sendResponse: any) => {
   if (message.type === 'START_RECORDING_WITH_STREAM') {
     startOffscreenRecording(message.payload.streamId);

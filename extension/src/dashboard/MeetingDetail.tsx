@@ -20,16 +20,16 @@ export default function MeetingDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-tally-orange border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   if (!data || data.error) {
     return (
-      <div className="text-center py-20 text-red-400">
-        <h2 className="text-xl">Meeting not found</h2>
-        <button onClick={() => navigate('/')} className="mt-4 text-indigo-400 hover:text-indigo-300">
+      <div className="text-center py-20 text-red-600">
+        <h2 className="text-2xl font-serif font-bold">Meeting not found</h2>
+        <button onClick={() => navigate('/')} className="mt-4 text-tally-orange hover:underline font-medium">
           Return to Dashboard
         </button>
       </div>
@@ -46,33 +46,33 @@ export default function MeetingDetail() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex items-center gap-4">
+    <div className="space-y-12 animate-in fade-in duration-700">
+      <div className="flex items-center gap-6 border-b border-black/10 pb-6">
         <button 
           onClick={() => navigate('/')}
-          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-slate-300"
+          className="p-2 rounded-full hover:bg-black/5 transition-colors text-black/60"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-white">{metadata?.title || 'Meeting Detail'}</h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <h2 className="text-4xl font-serif font-bold tracking-tight text-tally-text">{metadata?.title || 'Meeting Detail'}</h2>
+          <p className="text-black/50 mt-2 font-medium">
             {metadata?.created_at ? new Date(metadata.created_at).toLocaleString() : 'Unknown Date'}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-2 p-1 bg-slate-900/50 backdrop-blur border border-white/5 rounded-xl w-fit">
+      <div className="flex gap-2">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
               activeTab === tab.id 
-                ? 'bg-indigo-500/20 text-indigo-300 shadow-sm' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                ? 'bg-tally-card text-white shadow-lg' 
+                : 'text-black/60 hover:text-black hover:bg-black/5'
             }`}
           >
             {tab.label}
@@ -80,46 +80,46 @@ export default function MeetingDetail() {
         ))}
       </div>
 
-      <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 min-h-[500px]">
+      <div className="bg-white rounded-2xl p-8 lg:p-12 shadow-xl border border-black/5 min-h-[500px]">
         {activeTab === 'summary' && (
-          <div className="prose prose-invert prose-indigo max-w-none">
+          <div className="prose prose-lg max-w-none text-black/80 prose-headings:font-serif prose-headings:text-tally-text">
             {summary ? (
               <div dangerouslySetInnerHTML={{ __html: summary.replace(/\n/g, '<br/>') }} />
             ) : (
-              <p className="text-slate-500">No summary available yet.</p>
+              <p className="text-black/40 italic">No summary available yet.</p>
             )}
           </div>
         )}
 
         {activeTab === 'actions' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {!actions || actions.length === 0 ? (
-              <p className="text-slate-500">No action items extracted.</p>
+              <p className="text-black/40 italic">No action items extracted.</p>
             ) : typeof actions === 'string' ? (
-              <p className="text-slate-300">{actions}</p>
+              <p className="text-black/80">{actions}</p>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2">
                 {actions.map((action: any, i: number) => (
-                  <div key={i} className="p-4 rounded-xl bg-slate-900/50 border border-white/5 flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <span className="font-medium text-white">{action.task}</span>
+                  <div key={i} className="p-6 rounded-2xl bg-tally-card text-white flex flex-col gap-4 shadow-xl">
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="font-medium text-lg leading-snug">{action.task}</span>
                       {action.priority && (
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          action.priority.toLowerCase() === 'high' ? 'bg-red-500/10 text-red-400' :
-                          action.priority.toLowerCase() === 'medium' ? 'bg-yellow-500/10 text-yellow-400' :
-                          'bg-emerald-500/10 text-emerald-400'
+                        <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider ${
+                          action.priority.toLowerCase() === 'high' ? 'bg-red-500/20 text-red-400' :
+                          action.priority.toLowerCase() === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                          'bg-emerald-500/20 text-emerald-400'
                         }`}>
                           {action.priority}
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-4 text-sm text-slate-400">
-                      <span className="flex items-center gap-1">
+                    <div className="flex gap-4 text-sm font-medium text-white/50 border-t border-white/10 pt-4">
+                      <span className="flex items-center gap-1.5">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         {action.owner}
                       </span>
                       {action.deadline && action.deadline.toLowerCase() !== 'none' && (
-                        <span className="flex items-center gap-1 text-rose-400/80">
+                        <span className="flex items-center gap-1.5 text-tally-orange">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           {action.deadline}
                         </span>
@@ -133,16 +133,16 @@ export default function MeetingDetail() {
         )}
 
         {activeTab === 'transcript' && (
-          <div className="space-y-4 max-h-[600px] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <div className="space-y-6 max-h-[600px] overflow-y-auto pr-6 scrollbar-thin scrollbar-thumb-black/10 scrollbar-track-transparent">
             {!transcript || !transcript.segments ? (
-              <p className="text-slate-500">No transcript available.</p>
+              <p className="text-black/40 italic">No transcript available.</p>
             ) : (
               transcript.segments.map((segment: any, i: number) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className="w-24 shrink-0 text-right text-xs font-medium text-slate-500 pt-1 group-hover:text-indigo-400 transition-colors">
+                <div key={i} className="flex gap-6 group">
+                  <div className="w-16 shrink-0 text-right text-xs font-bold text-black/30 pt-1">
                     {Math.floor(segment.start / 60)}:{(Math.floor(segment.start % 60)).toString().padStart(2, '0')}
                   </div>
-                  <div className="text-slate-300 group-hover:text-white transition-colors">
+                  <div className="text-black/80 text-lg leading-relaxed">
                     {segment.text}
                   </div>
                 </div>
@@ -152,11 +152,11 @@ export default function MeetingDetail() {
         )}
 
         {activeTab === 'email' && (
-          <div className="bg-white rounded-lg p-6 shadow-xl">
+          <div>
             {email ? (
-              <div dangerouslySetInnerHTML={{ __html: email }} className="prose max-w-none text-slate-900" />
+              <div dangerouslySetInnerHTML={{ __html: email }} className="prose prose-lg max-w-none text-black/80" />
             ) : (
-              <p className="text-slate-500">Email draft not generated yet.</p>
+              <p className="text-black/40 italic">Email draft not generated yet.</p>
             )}
           </div>
         )}
