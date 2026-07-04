@@ -10,7 +10,11 @@
     <a href="https://github.com/avirooppal/Watchnt/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/avirooppal/Watchnt"/></a>
   </p>
 
-  <video src="watchnt.mp4" controls="controls" width="80%"></video>
+  <br />
+  
+  <video src="https://github.com/avirooppal/Watchnt/raw/main/watchnt.mp4" controls="controls" width="100%" style="max-width: 800px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></video>
+  
+  <br />
 </div>
 
 <hr />
