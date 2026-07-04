@@ -12,7 +12,7 @@
 
   <br />
   
-  https://github.com/avirooppal/Watchnt/raw/main/watchnt.mp4
+  [![WatchNT AI Meeting Copilot Demo](https://img.youtube.com/vi/gLmGs812cEA/maxresdefault.jpg)](https://youtu.be/gLmGs812cEA)
   
   <br />
 </div>
