@@ -2,9 +2,19 @@
   "manifest_version": 3,
   "name": "WatchNT AI",
   "version": "1.0.0",
+  "icons": {
+    "16": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  },
   "description": "Privacy-first AI Meeting Copilot",
   "action": {
-    "default_popup": "index.html"
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
   },
   "options_ui": {
     "page": "dashboard.html",

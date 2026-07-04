@@ -118,7 +118,7 @@ export default function Popup() {
     <div className="w-[340px] bg-watchnt-bg text-watchnt-text flex flex-col font-sans select-none overflow-hidden h-[480px]">
       <header className="px-5 py-4 border-b border-watchnt-border flex items-center justify-between bg-watchnt-bg">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-watchnt-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <img src="/logo.png" alt="WatchNT" className="w-5 h-5 rounded-sm object-cover" />
           <h1 className="text-sm font-bold tracking-tight">WatchNT</h1>
         </div>
         {meetingDetected ? (

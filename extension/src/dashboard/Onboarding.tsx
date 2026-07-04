@@ -74,8 +74,8 @@ export default function Onboarding() {
 
         {step === 1 && (
           <div className="space-y-6 text-center animate-slide-in-right">
-            <div className="w-12 h-12 rounded-full bg-accent-amber/10 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-6 h-6 text-accent-amber-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6">
+              <img src="/logo.png" alt="WatchNT Logo" className="w-full h-full rounded-2xl object-cover shadow-lg" />
             </div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Welcome to WatchNT</h1>
             <p className="text-text-muted">The private, open-source AI meeting copilot.</p>
