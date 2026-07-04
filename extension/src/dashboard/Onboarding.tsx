@@ -1,22 +1,47 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { useToast } from '../contexts/ToastContext';
+import { Select } from '../components/Select';
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
   
   const [config, setConfig] = useState({
     transcription_provider: 'local',
     llm_provider: 'ollama',
-    transcription_model: '',
-    llm_model: '',
+    transcription_model: 'base',
+    llm_model: 'llama3',
     ollama_base_url: 'http://localhost:11434/api/generate',
     openai_api_key: '',
     groq_api_key: '',
     gemini_api_key: '',
     openrouter_api_key: ''
   });
+
+  const nextStep = () => setStep(s => s + 1);
+  const prevStep = () => setStep(s => s - 1);
+
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch('http://localhost:8000/config/test', { method: 'POST' });
+      if (res.ok) {
+        showToast('Connection test passed!', 'success');
+        nextStep();
+      } else {
+        showToast('Connection test failed. Please check your details.', 'error');
+      }
+    } catch (err) {
+      showToast('Could not reach backend. Is it running?', 'error');
+    }
+    setTesting(false);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -27,148 +52,162 @@ export default function Onboarding() {
         body: JSON.stringify(config)
       });
       if (res.ok) {
-        // Mark onboarding complete in storage
         chrome.storage.local.set({ onboardingComplete: true }, () => {
+          showToast('Setup complete!', 'success');
           navigate('/');
         });
       } else {
-        alert('Failed to save settings.');
+        showToast('Failed to save settings.', 'error');
       }
     } catch (err) {
-      alert('Error connecting to backend.');
+      showToast('Error connecting to backend.', 'error');
     }
     setSaving(false);
   };
 
   return (
-    <div className="min-h-screen bg-tally-bg flex flex-col items-center justify-center p-6 animate-in fade-in duration-1000">
-      <div className="w-full max-w-2xl bg-white rounded-3xl p-10 md:p-14 shadow-2xl border border-black/5">
+    <div className="min-h-screen bg-signal-ink flex flex-col items-center justify-center p-6 animate-fade-in text-text-primary selection:bg-accent-amber/20">
+      <div className="w-full max-w-xl bg-signal-surface border border-border-hairline rounded-xl p-10 md:p-14 shadow-surface relative">
         
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-12 h-12 rounded-full bg-tally-orange mx-auto mb-6 flex items-center justify-center shadow-lg shadow-tally-orange/20">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          </div>
-          <h1 className="text-5xl font-serif font-bold text-tally-text tracking-tight mb-4">Welcome to WatchNT<span className="text-tally-orange">.</span></h1>
-          <p className="text-lg text-black/50 font-medium max-w-md mx-auto">
-            Let's configure your AI setup to get you started with private, automated meeting intelligence.
-          </p>
-        </div>
+        {/* Progress Bar */}
+        <div className="absolute top-0 left-0 h-1 bg-accent-amber transition-all duration-300 rounded-tl-xl" style={{ width: `${(step / 7) * 100}%` }} />
 
-        {/* Step 1: Transcription */}
         {step === 1 && (
-          <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
-            <h2 className="text-2xl font-serif font-bold text-tally-text border-b border-black/5 pb-4">
-              Step 1: Audio Transcription
-            </h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">Provider</label>
-                <select 
-                  value={config.transcription_provider}
-                  onChange={(e) => setConfig({...config, transcription_provider: e.target.value})}
-                  className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all appearance-none"
-                >
-                  <option value="local">Local (Faster-Whisper)</option>
-                  <option value="groq">Groq</option>
-                  <option value="openai">OpenAI</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">Model Name</label>
-                <input 
-                  type="text" 
-                  placeholder={config.transcription_provider === 'local' ? 'base' : config.transcription_provider === 'groq' ? 'whisper-large-v3' : 'whisper-1'}
-                  value={config.transcription_model}
-                  onChange={(e) => setConfig({...config, transcription_model: e.target.value})}
-                  className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all"
-                />
-              </div>
+          <div className="space-y-6 text-center animate-slide-in-right">
+            <div className="w-12 h-12 rounded-full bg-accent-amber/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-6 h-6 text-accent-amber-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
-            <button 
-              onClick={() => setStep(2)}
-              className="w-full py-4 mt-8 bg-tally-card hover:bg-black text-white rounded-full font-bold text-lg transition-all shadow-xl"
-            >
-              Next Step &rarr;
-            </button>
+            <h1 className="text-3xl font-display font-bold tracking-tight">Welcome to WatchNT</h1>
+            <p className="text-text-muted">The private, open-source AI meeting copilot.</p>
+            <div className="pt-8">
+              <Button onClick={nextStep} className="w-full" size="lg">Get Started</Button>
+            </div>
           </div>
         )}
 
-        {/* Step 2: LLM */}
         {step === 2 && (
-          <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
-            <h2 className="text-2xl font-serif font-bold text-tally-text border-b border-black/5 pb-4">
-              Step 2: AI Summarization
-            </h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">Provider</label>
-                <select 
-                  value={config.llm_provider}
-                  onChange={(e) => setConfig({...config, llm_provider: e.target.value})}
-                  className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all appearance-none"
-                >
-                  <option value="ollama">Ollama (Local)</option>
-                  <option value="groq">Groq</option>
-                  <option value="openai">OpenAI</option>
-                  <option value="gemini">Google Gemini</option>
-                  <option value="openrouter">OpenRouter</option>
-                </select>
-              </div>
-              
-              {config.llm_provider === 'ollama' && (
-                <div>
-                  <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">Ollama Base URL</label>
-                  <input 
-                    type="text" 
+          <div className="space-y-6 text-center animate-slide-in-right">
+            <h2 className="text-2xl font-display font-bold tracking-tight">What is WatchNT?</h2>
+            <p className="text-text-muted leading-relaxed">
+              WatchNT runs silently in the background during your Google Meets. It reads the live captions directly from your browser—no bots joining the call.
+            </p>
+            <div className="pt-8 flex gap-4">
+              <Button variant="ghost" onClick={prevStep} className="w-1/3">Back</Button>
+              <Button onClick={nextStep} className="w-2/3">Continue</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6 text-center animate-slide-in-right">
+            <h2 className="text-2xl font-display font-bold tracking-tight">How it works</h2>
+            <div className="text-left space-y-4 text-sm text-text-muted bg-black/20 p-6 rounded-lg border border-border-hairline">
+              <div className="flex gap-3"><span className="text-accent-amber">1.</span> Join a meeting and click the WatchNT extension.</div>
+              <div className="flex gap-3"><span className="text-accent-amber">2.</span> WatchNT securely scrapes the live captions.</div>
+              <div className="flex gap-3"><span className="text-accent-amber">3.</span> After the meeting, it generates a transcript.</div>
+              <div className="flex gap-3"><span className="text-accent-amber">4.</span> Your chosen AI creates a summary and extracts actions.</div>
+            </div>
+            <div className="pt-8 flex gap-4">
+              <Button variant="ghost" onClick={prevStep} className="w-1/3">Back</Button>
+              <Button onClick={nextStep} className="w-2/3">Got it</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-6 animate-slide-in-right">
+            <h2 className="text-2xl font-display font-bold tracking-tight text-center">Choose AI Provider</h2>
+            <div className="space-y-4 relative z-50">
+              <label className="block text-sm font-medium text-text-muted">Primary LLM Provider</label>
+              <Select 
+                value={config.llm_provider}
+                onChange={(val) => setConfig({...config, llm_provider: val})}
+                options={[
+                  { value: 'ollama', label: 'Ollama (100% Local & Private)' },
+                  { value: 'groq', label: 'Groq (Ultra Fast)' },
+                  { value: 'openai', label: 'OpenAI' },
+                  { value: 'gemini', label: 'Google Gemini' },
+                  { value: 'openrouter', label: 'OpenRouter' }
+                ]}
+              />
+            </div>
+            <div className="pt-8 flex gap-4 relative z-0">
+              <Button variant="ghost" onClick={prevStep} className="w-1/3">Back</Button>
+              <Button onClick={nextStep} className="w-2/3">Next</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="space-y-6 animate-slide-in-right">
+            <h2 className="text-2xl font-display font-bold tracking-tight text-center">Configure Provider</h2>
+            <div className="space-y-4">
+              {config.llm_provider === 'ollama' ? (
+                <>
+                  <Input 
+                    label="Ollama Base URL" 
                     value={config.ollama_base_url}
                     onChange={(e) => setConfig({...config, ollama_base_url: e.target.value})}
-                    className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all"
                   />
-                </div>
-              )}
-
-              {config.llm_provider !== 'ollama' && (
-                <div>
-                  <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">{config.llm_provider.toUpperCase()} API Key</label>
-                  <input 
-                    type="password" 
+                  <Input 
+                    label="Model Name" 
+                    placeholder="e.g. llama3"
+                    value={config.llm_model}
+                    onChange={(e) => setConfig({...config, llm_model: e.target.value})}
+                  />
+                </>
+              ) : (
+                <>
+                  <Input 
+                    type="password"
+                    label={`${config.llm_provider.toUpperCase()} API Key`}
                     value={(config as any)[`${config.llm_provider}_api_key`]}
                     onChange={(e) => setConfig({...config, [`${config.llm_provider}_api_key`]: e.target.value})}
-                    className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all"
                   />
-                </div>
+                  <Input 
+                    label="Model Name" 
+                    placeholder="e.g. gpt-4o, gemini-1.5-pro"
+                    value={config.llm_model}
+                    onChange={(e) => setConfig({...config, llm_model: e.target.value})}
+                  />
+                </>
               )}
-
-              <div>
-                <label className="block text-sm font-bold tracking-wide uppercase text-black/40 mb-2">Model Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. llama3, gpt-4o, gemini-1.5-pro"
-                  value={config.llm_model}
-                  onChange={(e) => setConfig({...config, llm_model: e.target.value})}
-                  className="w-full p-4 bg-tally-bg border border-black/5 rounded-xl text-tally-text font-bold text-lg focus:outline-none focus:border-tally-orange focus:ring-1 focus:ring-tally-orange transition-all"
-                />
-              </div>
             </div>
-            <div className="flex gap-4 mt-8">
-              <button 
-                onClick={() => setStep(1)}
-                className="w-1/3 py-4 bg-white border border-black/10 hover:bg-black/5 text-tally-text rounded-full font-bold text-lg transition-all"
-              >
-                &larr; Back
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={saving}
-                className="w-2/3 py-4 bg-tally-orange hover:bg-black text-white rounded-full font-bold text-lg transition-all shadow-xl shadow-tally-orange/20"
-              >
-                {saving ? 'Completing Setup...' : 'Complete Setup \u2714'}
-              </button>
+            <div className="pt-8 flex gap-4">
+              <Button variant="ghost" onClick={prevStep} className="w-1/3">Back</Button>
+              <Button onClick={nextStep} className="w-2/3">Next</Button>
             </div>
           </div>
         )}
-        
+
+        {step === 6 && (
+          <div className="space-y-6 text-center animate-slide-in-right">
+            <h2 className="text-2xl font-display font-bold tracking-tight">Test Connection</h2>
+            <p className="text-text-muted text-sm">
+              We'll quickly ping your backend and AI provider to make sure everything is wired up correctly.
+            </p>
+            <div className="pt-8 flex gap-4">
+              <Button variant="ghost" onClick={prevStep} className="w-1/3" disabled={testing}>Back</Button>
+              <Button onClick={handleTest} isLoading={testing} className="w-2/3">Test Now</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 7 && (
+          <div className="space-y-6 text-center animate-slide-in-right">
+            <div className="w-16 h-16 rounded-full bg-state-success/10 flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-state-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h2 className="text-3xl font-display font-bold tracking-tight">Everything Ready</h2>
+            <p className="text-text-muted">
+              WatchNT is configured. You can tweak more advanced settings in the Settings page later.
+            </p>
+            <div className="pt-8">
+              <Button onClick={handleSave} isLoading={saving} className="w-full" size="lg">Open Dashboard</Button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

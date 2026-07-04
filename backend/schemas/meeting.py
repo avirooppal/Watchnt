@@ -14,3 +14,6 @@ class MeetingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class MeetingUpdate(BaseModel):
+    title: Optional[str] = None

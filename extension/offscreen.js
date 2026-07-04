@@ -1,5 +1,6 @@
 let mediaRecorder = null;
 let audioChunks = [];
+let mediaStreams = [];
 
 chrome.runtime.onMessage.addListener(async (message) => {
   if (message.type === 'OFFSCREEN_START_RECORDING') {
@@ -13,7 +14,7 @@ async function startRecording(streamId) {
   if (mediaRecorder) return;
   
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const tabStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         mandatory: {
           chromeMediaSource: 'tab',
@@ -21,8 +22,39 @@ async function startRecording(streamId) {
         }
       }
     });
+
+    let micStream;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      console.warn("Microphone not available or permission denied:", e);
+    }
+
+    mediaStreams = [tabStream];
+    let finalStream = tabStream;
+
+    if (micStream) {
+      mediaStreams.push(micStream);
+      
+      const audioCtx = new AudioContext();
+      const dest = audioCtx.createMediaStreamDestination();
+
+      // Pan Tab audio to Left (-1)
+      const tabSource = audioCtx.createMediaStreamSource(tabStream);
+      const tabPanner = audioCtx.createStereoPanner();
+      tabPanner.pan.value = -1;
+      tabSource.connect(tabPanner).connect(dest);
+
+      // Pan Mic audio to Right (1)
+      const micSource = audioCtx.createMediaStreamSource(micStream);
+      const micPanner = audioCtx.createStereoPanner();
+      micPanner.pan.value = 1;
+      micSource.connect(micPanner).connect(dest);
+
+      finalStream = dest.stream;
+    }
     
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    mediaRecorder = new MediaRecorder(finalStream, { mimeType: 'audio/webm' });
     audioChunks = [];
     
     mediaRecorder.ondataavailable = (event) => {
@@ -47,9 +79,11 @@ async function startRecording(streamId) {
 function stopRecording() {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     mediaRecorder.stop();
-    // Stop all tracks
-    mediaRecorder.stream.getTracks().forEach(track => track.stop());
   }
+  mediaStreams.forEach(stream => {
+    stream.getTracks().forEach(track => track.stop());
+  });
+  mediaStreams = [];
 }
 
 async function uploadAudio(blob) {

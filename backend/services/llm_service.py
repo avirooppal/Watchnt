@@ -23,12 +23,12 @@ class LLMService:
         return await provider.generate_response(prompt)
 
     async def summarize_meeting(self, transcript_segments: list) -> str:
-        full_text = " ".join([seg["text"] for seg in transcript_segments])
+        full_text = "\n".join([f"[{seg.get('speaker', 'All')}]: {seg['text']}" for seg in transcript_segments])
         prompt = f"Summarize the following meeting transcript. Extract the key points discussed:\n\n{full_text}"
         return await self._generate(prompt)
 
     async def extract_action_items(self, transcript_segments: list) -> str:
-        full_text = " ".join([seg["text"] for seg in transcript_segments])
+        full_text = "\n".join([f"[{seg.get('speaker', 'All')}]: {seg['text']}" for seg in transcript_segments])
         prompt = f"""Extract a list of action items from the following meeting transcript.
 Return ONLY a valid JSON array of objects, with no markdown formatting, no backticks, and no explanation.
 Each object must exactly match this schema:

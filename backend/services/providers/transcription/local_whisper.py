@@ -24,7 +24,7 @@ class LocalWhisperProvider(TranscriptionProvider):
         model = self._get_model()
         
         try:
-            segments, info = model.transcribe(audio_path, beam_size=5)
+            segments, info = model.transcribe(audio_path, beam_size=5, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))
         except Exception as e:
             raise RuntimeError(f"Local transcription is unavailable because the audio could not be decoded. Install FFmpeg or switch to a cloud transcription provider. Details: {str(e)}")
             

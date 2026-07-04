@@ -90,3 +90,45 @@ def get_meeting_status(meeting_id: str, db: Session = Depends(get_db)):
     if not meeting:
         return {"error": "Meeting not found"}
     return {"status": meeting.status, "job_id": meeting.job_id}
+
+from schemas.meeting import MeetingUpdate
+import shutil
+
+@router.patch("/meeting/{meeting_id}")
+def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = Depends(get_db)):
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        return {"error": "Meeting not found"}
+        
+    if update_data.title:
+        meeting.title = update_data.title
+        
+    db.commit()
+    db.refresh(meeting)
+    
+    # Update title in metadata.json if it exists
+    meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
+    metadata_path = os.path.join(meeting_dir, "metadata.json")
+    if os.path.exists(metadata_path):
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        meta["title"] = meeting.title
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
+            
+    return meeting
+
+@router.delete("/meeting/{meeting_id}")
+def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        return {"error": "Meeting not found"}
+        
+    db.delete(meeting)
+    db.commit()
+    
+    meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
+    if os.path.exists(meeting_dir):
+        shutil.rmtree(meeting_dir)
+        
+    return {"success": True}

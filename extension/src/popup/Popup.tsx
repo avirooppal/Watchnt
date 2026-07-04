@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
+import { useToast } from '../contexts/ToastContext';
 
 export default function Popup() {
   const [isRecording, setIsRecording] = useState(false);
   const [meetingDetected, setMeetingDetected] = useState(false);
   const [activeTabId, setActiveTabId] = useState<number | null>(null);
+  const [timer, setTimer] = useState(0);
+  const [pipelineState, setPipelineState] = useState<Record<string, 'pending' | 'active' | 'done' | 'error'>>({});
+  const { showToast } = useToast();
 
   useEffect(() => {
-    chrome.storage.local.get(['isRecording'], (res: any) => {
+    chrome.storage.local.get(['isRecording', 'recordingStartTime', 'pipelineState'], (res: any) => {
       setIsRecording(res.isRecording || false);
+      if (res.isRecording && res.recordingStartTime) {
+        setTimer(Math.floor((Date.now() - res.recordingStartTime) / 1000));
+      }
+      if (res.pipelineState) setPipelineState(res.pipelineState);
     });
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
@@ -21,117 +29,165 @@ export default function Popup() {
     const messageListener = (msg: any) => {
       if (msg.type === 'RECORDING_STATE_CHANGED') {
         setIsRecording(msg.payload.isRecording);
+        if (msg.payload.isRecording) {
+          showToast('Meeting recording started', 'success');
+        } else {
+          showToast('Recording stopped', 'info');
+        }
       }
-      if (msg.type === 'MEETING_DETECTED') {
-        setMeetingDetected(true);
-      }
+      if (msg.type === 'MEETING_DETECTED') setMeetingDetected(true);
+      if (msg.type === 'PIPELINE_UPDATE') setPipelineState(msg.payload);
     };
     
-    const storageListener = (changes: any, area: string) => {
-      if (area === 'local' && changes.isRecording) {
-        setIsRecording(changes.isRecording.newValue || false);
-      }
-    };
-
     chrome.runtime.onMessage.addListener(messageListener);
-    chrome.storage.onChanged.addListener(storageListener);
     
+    let interval: ReturnType<typeof setInterval>;
+    if (isRecording) {
+      interval = setInterval(() => setTimer(t => t + 1), 1000);
+    }
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
-      chrome.storage.onChanged.removeListener(storageListener);
+      if (interval) clearInterval(interval);
     };
-  }, []);
+  }, [isRecording, showToast]);
 
   const handleStart = () => {
     if (!activeTabId) return;
-    
     chrome.tabCapture.getMediaStreamId({ targetTabId: activeTabId }, (streamId: string) => {
       if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-        alert('Failed to capture tab: ' + chrome.runtime.lastError.message);
+        showToast(`Failed to capture: ${chrome.runtime.lastError.message}`, 'error');
         return;
       }
-      chrome.runtime.sendMessage({ 
-        type: 'START_RECORDING_WITH_STREAM',
-        payload: { streamId }
-      });
+      chrome.runtime.sendMessage({ type: 'START_RECORDING_WITH_STREAM', payload: { streamId } });
       setIsRecording(true);
-      setTimeout(() => window.close(), 100);
+      setTimer(0);
+      chrome.storage.local.set({ recordingStartTime: Date.now() });
     });
   };
 
-  const handleStop = () => {
-    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+  const handleStop = () => chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+  const handleDashboard = () => chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleDashboard = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
-  };
+  const renderPipeline = () => {
+    const steps = [
+      { id: 'recording', label: 'Recording' },
+      { id: 'uploading', label: 'Uploading' },
+      { id: 'transcribing', label: 'Transcribing' },
+      { id: 'summarizing', label: 'Summarizing' },
+      { id: 'actions', label: 'Action Items' },
+      { id: 'email', label: 'Email' }
+    ];
 
-  const handleSettings = () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html#/settings') });
+    if (!isRecording && Object.keys(pipelineState).length === 0) return null;
+
+    return (
+      <div className="w-full flex flex-col gap-2 mt-4 px-4 py-3 bg-watchnt-surface border border-watchnt-border rounded-lg">
+        <div className="text-[10px] font-bold text-watchnt-text-muted uppercase tracking-wider mb-1">Current Step</div>
+        {steps.map(step => {
+          let state = pipelineState[step.id] || (isRecording && step.id === 'recording' ? 'active' : 'pending');
+          
+          return (
+            <div key={step.id} className={`flex items-center gap-3 text-sm font-medium ${state === 'active' ? 'text-watchnt-text' : state === 'done' ? 'text-watchnt-success' : 'text-watchnt-text-muted/50'}`}>
+              {state === 'done' ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              ) : state === 'active' ? (
+                <div className="w-4 h-4 flex items-center justify-center">
+                  <div className="w-2 h-2 rounded-full bg-watchnt-accent animate-ping" />
+                </div>
+              ) : state === 'error' ? (
+                 <svg className="w-4 h-4 text-watchnt-error" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="5" strokeWidth={2} /></svg>
+              )}
+              {step.label}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
-    <div className="flex flex-col w-[340px] min-h-[420px] bg-tally-bg text-tally-text font-sans relative">
-      <header className="px-6 py-5 flex justify-between items-center border-b border-black/5 bg-tally-bg z-10">
+    <div className="w-[340px] bg-watchnt-bg text-watchnt-text flex flex-col font-sans select-none overflow-hidden h-[480px]">
+      <header className="px-5 py-4 border-b border-watchnt-border flex items-center justify-between bg-watchnt-bg">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-tally-orange"></div>
-          <h1 className="text-xl font-bold font-serif italic text-tally-text tracking-tight">WatchNT</h1>
+          <svg className="w-4 h-4 text-watchnt-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <h1 className="text-sm font-bold tracking-tight">WatchNT</h1>
         </div>
-        <button onClick={handleSettings} className="text-black/40 hover:text-black transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-        </button>
-      </header>
-
-      <main className="flex-1 p-6 flex flex-col items-center justify-center gap-8 z-10">
         {meetingDetected ? (
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-600"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>
-            </div>
-            <span className="text-emerald-700 font-bold text-sm tracking-wide uppercase">Meeting Detected</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-watchnt-success">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            Meet Detected
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 opacity-50">
-            <div className="w-16 h-16 rounded-full bg-black/5 border border-black/10 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-black/40"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-            </div>
-            <span className="text-black/60 font-bold text-sm tracking-wide uppercase">No Meeting Found</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-watchnt-text-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-watchnt-text-muted/50" />
+            No Meeting
           </div>
         )}
+      </header>
 
-        <div className="flex flex-col w-full gap-3 mt-auto">
-          {!isRecording ? (
-            <button 
-              onClick={handleStart}
-              disabled={!meetingDetected}
-              className={`w-full py-3.5 rounded-full font-bold text-white transition-all shadow-md flex justify-center items-center gap-2
-                ${meetingDetected ? 'bg-tally-card hover:bg-black' : 'bg-black/10 text-black/40 cursor-not-allowed shadow-none'}`}
-            >
-              Start Capturing
-            </button>
-          ) : (
-            <button 
-              onClick={handleStop}
-              className="w-full py-3.5 bg-white hover:bg-black/5 border border-black/10 rounded-full font-bold text-red-600 transition-all flex items-center justify-center gap-2 shadow-sm"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-              Stop Capturing
-            </button>
-          )}
-          
-          <button 
-            onClick={handleDashboard}
-            className="w-full py-3.5 bg-transparent hover:bg-black/5 rounded-full font-semibold text-black/60 hover:text-black transition-all flex justify-center items-center gap-2"
-          >
-            Open Dashboard &rarr;
-          </button>
-        </div>
+      <main className="flex-1 flex flex-col items-center justify-center p-5 w-full">
+        {isRecording ? (
+          <div className="flex flex-col items-center w-full animate-fade-in">
+            <div className="flex items-center gap-2 mb-2 text-watchnt-error font-semibold">
+              <div className="w-2.5 h-2.5 rounded-full bg-watchnt-error shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+              Recording
+            </div>
+            <div className="text-3xl font-mono font-medium tracking-tight mb-6">
+              {formatTime(timer)}
+            </div>
+            <div className="flex items-center gap-[3px] h-6 mb-2 w-full justify-center opacity-80">
+              {[...Array(20)].map((_, i) => (
+                <div key={i} className="w-1 bg-watchnt-accent rounded-full animate-waveform" style={{ animationDelay: `${i * 0.05}s` }} />
+              ))}
+            </div>
+          </div>
+        ) : !Object.keys(pipelineState).length ? (
+          <div className="flex flex-col items-center text-center px-4 w-full h-full justify-center opacity-70">
+            <svg className="w-10 h-10 mb-4 text-watchnt-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            <p className="text-sm font-medium mb-1">Ready to capture.</p>
+            <p className="text-xs text-watchnt-text-muted">Join a Google Meet and press start below.</p>
+          </div>
+        ) : null}
+
+        {renderPipeline()}
       </main>
       
-      <footer className="py-4 text-center text-[10px] font-bold tracking-wider uppercase text-black/30 border-t border-black/5">
-        Privacy-first AI Meeting Copilot
+      <footer className="p-4 border-t border-watchnt-border flex flex-col gap-2 bg-watchnt-bg shrink-0">
+        {!isRecording ? (
+          <button 
+            onClick={handleStart}
+            disabled={!meetingDetected}
+            className={`w-full py-2.5 rounded-md font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-watchnt-accent/50 ${
+              meetingDetected 
+                ? 'bg-watchnt-accent text-white hover:bg-watchnt-accent-light shadow-button' 
+                : 'bg-watchnt-surface text-watchnt-text-muted cursor-not-allowed border border-watchnt-border'
+            }`}
+          >
+            Start Recording
+          </button>
+        ) : (
+          <button 
+            onClick={handleStop}
+            className="w-full py-2.5 rounded-md font-medium text-sm bg-watchnt-surface border border-watchnt-error/30 text-watchnt-error hover:bg-watchnt-error/10 transition-all focus:outline-none focus:ring-2 focus:ring-watchnt-error/50 shadow-surface"
+          >
+            Stop Recording
+          </button>
+        )}
+        <button 
+          onClick={handleDashboard}
+          className="w-full py-2.5 rounded-md font-medium text-sm bg-transparent hover:bg-watchnt-surface text-watchnt-text-muted hover:text-watchnt-text transition-all focus:outline-none"
+        >
+          Open Dashboard
+        </button>
       </footer>
     </div>
   );
