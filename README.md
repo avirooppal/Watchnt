@@ -12,7 +12,7 @@
 
   <br />
   
-  [![WatchNT AI Meeting Copilot Demo](https://img.youtube.com/vi/gLmGs812cEA/maxresdefault.jpg)](https://youtu.be/gLmGs812cEA)
+  [![WatchNT AI Meeting Copilot Demo](https://img.youtube.com/vi/gLmGs812cEA/maxresdefault.jpg)](https://www.youtube.com/watch?v=gLmGs812cEA&autoplay=1)
   
   <br />
 </div>
