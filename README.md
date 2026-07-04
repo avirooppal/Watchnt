@@ -12,14 +12,14 @@
 
   <br />
   
-  <video src="https://github.com/avirooppal/Watchnt/raw/main/watchnt.mp4" controls="controls" width="100%" style="max-width: 800px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></video>
+  https://github.com/avirooppal/Watchnt/raw/main/watchnt.mp4
   
   <br />
 </div>
 
 <hr />
 
-## 📖 Table of Contents
+## Table of Contents
 - [Features](#-features)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
@@ -31,19 +31,19 @@
 - [Contributing](#-contributing)
 - [License](#-license)
 
-## ✨ Features
+## Features
 - **Local Processing**: Transcribe and summarize meetings locally without sending data to third parties.
 - **BYOK (Bring Your Own Keys)**: Fully open source, plug in your own models.
 - **Cross-Platform Support**: Works seamlessly on Google Meet, Zoom, and Microsoft Teams via a browser extension.
 - **High-Quality Audio Capture**: Uses offscreen documents to capture pristine tab audio.
 
-## 🏗 Architecture
+## Architecture
 
 - **Browser Extension:** The primary interface. Injects a Copilot Bot into Google Meet, Zoom, or Teams, and uses an offscreen document to capture high-quality tab audio. It also provides the dashboard interface for reviewing past meetings, transcripts, and action items.
 - **FastAPI Backend:** Handles audio processing and AI pipelines. It executes tasks sequentially: transcription -> summarization -> action item extraction.
 - **Storage:** Local filesystem for audio and transcripts, and SQLite for metadata.
 
-## 💻 Tech Stack
+## Tech Stack
 
 - **Dashboard & Extension:** React + Vite + TailwindCSS + CRXJS (Manifest V3)
 - **Backend API:** FastAPI (Python 3.10)
@@ -52,7 +52,7 @@
 - **Database:** SQLite
 - **Orchestration:** Docker Compose
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 - Docker & Docker Compose
@@ -92,8 +92,8 @@ This will start:
 5. The audio will automatically upload to your local backend and be processed through the AI pipeline.
 6. Open the Dashboard from your extension menu to view your summarized meeting, full transcript, and extracted action items!
 
-## 🤝 Contributing
+## Contributing
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/avirooppal/Watchnt/issues).
 
-## 📝 License
+## License
 This project is open-source and available under the MIT License.
