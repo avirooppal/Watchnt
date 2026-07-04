@@ -12,35 +12,34 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("WebSocket connection established")
     
-    # We will accumulate audio chunks in a temporary file
     temp_dir = tempfile.gettempdir()
-    temp_audio_path = os.path.join(temp_dir, "live_audio.webm")
+    session_id = id(websocket)
+    temp_audio_path = os.path.join(temp_dir, f"chunk_{session_id}.webm")
     
-    with open(temp_audio_path, "wb") as f:
-        pass # Create/clear file
-        
+    full_transcript = []
+    
     try:
         while True:
             # Receive audio chunk from frontend
             data = await websocket.receive_bytes()
             print(f"Received chunk of {len(data)} bytes")
             
-            # Append chunk to our temporary file
-            with open(temp_audio_path, "ab") as f:
+            # Save JUST this chunk to a temporary file
+            with open(temp_audio_path, "wb") as f:
                 f.write(data)
                 
-            # Transcribe the accumulated audio
+            # Transcribe the individual chunk
             try:
-                # We could transcribe just the chunk, but Whisper expects a valid audio file.
-                # Accumulating and transcribing the whole thing is simpler for this MVP.
-                # A more advanced approach would use a sliding window or a streaming audio format.
                 segments = transcription_service.transcribe(temp_audio_path)
                 if segments:
-                    # We just need the text of the latest transcription
-                    full_text = " ".join([seg["text"] for seg in segments])
+                    chunk_text = " ".join([seg["text"] for seg in segments])
                     
-                    # Send the partial/live transcript back
-                    await websocket.send_json({"transcript": full_text})
+                    if chunk_text.strip():
+                        full_transcript.append(chunk_text.strip())
+                    
+                    # Send the combined transcript back
+                    combined_text = " ".join(full_transcript)
+                    await websocket.send_json({"transcript": combined_text})
                 
             except Exception as e:
                 print(f"Transcription error: {e}")
