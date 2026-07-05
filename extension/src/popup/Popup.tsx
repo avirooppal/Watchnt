@@ -4,18 +4,30 @@ import { useToast } from '../contexts/ToastContext';
 export default function Popup() {
   const [isRecording, setIsRecording] = useState(false);
   const [meetingDetected, setMeetingDetected] = useState(false);
-  const [activeTabId, setActiveTabId] = useState<number | null>(null);
+
   const [timer, setTimer] = useState(0);
   const [pipelineState, setPipelineState] = useState<Record<string, 'pending' | 'active' | 'done' | 'error'>>({});
   const { showToast } = useToast();
 
   useEffect(() => {
-    chrome.storage.local.get(['isRecording', 'recordingStartTime', 'pipelineState'], (res: any) => {
+    chrome.storage.local.get(['isRecording', 'recordingStartTime', 'pipelineStatus'], (res: any) => {
       setIsRecording(res.isRecording || false);
       if (res.isRecording && res.recordingStartTime) {
         setTimer(Math.floor((Date.now() - res.recordingStartTime) / 1000));
       }
-      if (res.pipelineState) setPipelineState(res.pipelineState);
+      if (res.pipelineStatus) {
+        const status = res.pipelineStatus;
+        const newState: Record<string, 'pending' | 'active' | 'done' | 'error'> = {};
+        if (status === 'RECORDING') { newState.recording = 'active'; }
+        if (status === 'UPLOADING') { newState.recording = 'done'; newState.uploading = 'active'; }
+        if (status === 'TRANSCRIBING') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'active'; }
+        if (status === 'SUMMARIZING') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'active'; }
+        if (status === 'EXTRACTING_ACTIONS') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'active'; }
+        if (status === 'GENERATING_EMAIL') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'active'; }
+        if (status === 'COMPLETED') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'done'; }
+        if (status === 'FAILED') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'error'; }
+        setPipelineState(newState);
+      }
     });
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
@@ -23,7 +35,6 @@ export default function Popup() {
       if (url.includes('meet.google.com') || url.includes('zoom.us') || url.includes('teams.microsoft.com')) {
         setMeetingDetected(true);
       }
-      if (tabs[0]?.id) setActiveTabId(tabs[0].id);
     });
 
     const messageListener = (msg: any) => {
@@ -39,7 +50,28 @@ export default function Popup() {
       if (msg.type === 'PIPELINE_UPDATE') setPipelineState(msg.payload);
     };
     
+    const storageListener = (changes: any) => {
+      if (changes.isRecording) {
+        setIsRecording(changes.isRecording.newValue);
+      }
+      if (changes.pipelineStatus) {
+        // Map backend string status to pipeline state for the UI
+        const status = changes.pipelineStatus.newValue;
+        const newState: Record<string, 'pending' | 'active' | 'done' | 'error'> = {};
+        if (status === 'RECORDING') { newState.recording = 'active'; }
+        if (status === 'UPLOADING') { newState.recording = 'done'; newState.uploading = 'active'; }
+        if (status === 'TRANSCRIBING') { newState.uploading = 'done'; newState.transcribing = 'active'; }
+        if (status === 'SUMMARIZING') { newState.transcribing = 'done'; newState.summarizing = 'active'; }
+        if (status === 'EXTRACTING_ACTIONS') { newState.summarizing = 'done'; newState.actions = 'active'; }
+        if (status === 'GENERATING_EMAIL') { newState.actions = 'done'; newState.email = 'active'; }
+        if (status === 'COMPLETED') { newState.email = 'done'; }
+        if (status === 'FAILED') { newState.email = 'error'; }
+        setPipelineState(newState);
+      }
+    };
+    
     chrome.runtime.onMessage.addListener(messageListener);
+    chrome.storage.onChanged.addListener(storageListener);
     
     let interval: ReturnType<typeof setInterval>;
     if (isRecording) {
@@ -47,25 +79,28 @@ export default function Popup() {
     }
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
+      chrome.storage.onChanged.removeListener(storageListener);
       if (interval) clearInterval(interval);
     };
   }, [isRecording, showToast]);
 
   const handleStart = () => {
-    if (!activeTabId) return;
-    chrome.tabCapture.getMediaStreamId({ targetTabId: activeTabId }, (streamId: string) => {
-      if (chrome.runtime.lastError) {
-        showToast(`Failed to capture: ${chrome.runtime.lastError.message}`, 'error');
-        return;
-      }
-      chrome.runtime.sendMessage({ type: 'START_RECORDING_WITH_STREAM', payload: { streamId } });
-      setIsRecording(true);
-      setTimer(0);
-      chrome.storage.local.set({ recordingStartTime: Date.now() });
-    });
+    chrome.runtime.sendMessage({ type: 'START_RECORDING_WITH_STREAM' });
+    setIsRecording(true);
+    setTimer(0);
+    chrome.storage.local.set({ recordingStartTime: Date.now() });
   };
 
-  const handleStop = () => chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+  const handleStop = () => {
+    setIsRecording(false);
+    chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+  };
+  
+  const handleCancelPipeline = () => {
+    chrome.storage.local.remove(['pipelineStatus', 'isUploading']);
+    setPipelineState({});
+  };
+
   const handleDashboard = () => chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
 
   const formatTime = (seconds: number) => {
@@ -110,16 +145,23 @@ export default function Popup() {
             </div>
           );
         })}
+        
+        <button 
+          onClick={handleCancelPipeline}
+          className="mt-3 w-full py-1.5 rounded-none border border-state-danger/30 text-state-danger text-[10px] font-mono font-bold tracking-widest uppercase hover:bg-state-danger hover:text-white transition-colors"
+        >
+          Clear
+        </button>
       </div>
     );
   };
 
   return (
-    <div className="w-[340px] bg-signal-ink text-text-primary flex flex-col font-sans select-none overflow-hidden h-[480px]">
-      <header className="px-5 py-4 border-b border-border-hairline flex items-center justify-between bg-signal-ink">
-        <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="WatchNT" className="w-5 h-5 rounded-sm object-cover" />
-          <h1 className="text-sm font-bold tracking-tight">WatchNT</h1>
+    <div className="w-[340px] bg-signal-ink text-text-primary flex flex-col font-sans select-none overflow-hidden h-[540px]">
+      <header className="px-6 py-5 border-b-2 border-border-strong flex items-center justify-between bg-signal-ink">
+        <div className="flex items-center gap-3">
+          <img src="/logo.png" alt="WatchNT" className="w-5 h-5 rounded-none object-cover grayscale" />
+          <h1 className="text-sm font-display tracking-widest uppercase font-semibold">WatchNT</h1>
         </div>
         {meetingDetected ? (
           <div className="flex items-center gap-1.5 text-[11px] font-medium text-state-success">
@@ -134,21 +176,28 @@ export default function Popup() {
         )}
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-5 w-full">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 w-full overflow-hidden">
         {isRecording ? (
           <div className="flex flex-col items-center w-full animate-fade-in">
-            <div className="flex items-center gap-2 mb-2 text-state-danger font-semibold">
-              <div className="w-2.5 h-2.5 rounded-full bg-state-danger shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+            <div className="flex items-center gap-3 mb-4 text-state-danger font-mono tracking-widest text-[10px] uppercase">
+              <div className="w-2.5 h-2.5 rounded-none bg-state-danger shadow-[0_0_12px_rgba(239,68,68,0.8)] animate-pulse" />
               Recording
             </div>
-            <div className="text-3xl font-mono font-medium tracking-tight mb-6">
+            <div className="text-5xl font-mono font-medium tracking-tight mb-8 text-text-primary">
               {formatTime(timer)}
             </div>
-            <div className="flex items-center gap-[3px] h-6 mb-2 w-full justify-center opacity-80">
+            <div className="flex items-center gap-[3px] h-6 mb-8 w-full justify-center opacity-80">
               {[...Array(20)].map((_, i) => (
-                <div key={i} className="w-1 bg-accent-amber rounded-full animate-waveform" style={{ animationDelay: `${i * 0.05}s` }} />
+                <div key={i} className="w-1 bg-accent-amber rounded-none animate-waveform" style={{ animationDelay: `${i * 0.05}s` }} />
               ))}
             </div>
+            <button 
+              onClick={handleStop}
+              className="flex items-center gap-3 px-6 py-2.5 rounded-none border border-state-danger/50 text-state-danger text-[10px] font-mono font-bold tracking-widest uppercase hover:bg-state-danger hover:text-white transition-colors shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-pulse hover:animate-none"
+            >
+              <div className="w-2.5 h-2.5 bg-current rounded-none" />
+              Stop Recording
+            </button>
           </div>
         ) : !Object.keys(pipelineState).length ? (
           <div className="flex flex-col items-center text-center px-4 w-full h-full justify-center opacity-70">
@@ -161,30 +210,23 @@ export default function Popup() {
         {renderPipeline()}
       </main>
       
-      <footer className="p-4 border-t border-border-hairline flex flex-col gap-2 bg-signal-ink shrink-0">
-        {!isRecording ? (
+      <footer className="p-6 border-t-2 border-border-strong flex flex-col gap-3 bg-signal-ink shrink-0">
+        {!isRecording && (
           <button 
             onClick={handleStart}
             disabled={!meetingDetected}
-            className={`w-full py-2.5 rounded-md font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent-amber/50 ${
+            className={`w-full py-3 rounded-none font-sans font-semibold text-sm transition-all focus:outline-none focus:ring-1 focus:ring-accent-amber ${
               meetingDetected 
-                ? 'bg-accent-amber text-white hover:bg-accent-amber-dim shadow-button' 
-                : 'bg-signal-surface text-text-muted cursor-not-allowed border border-border-hairline'
+                ? 'bg-accent-amber text-signal-ink hover:bg-accent-amber-dim shadow-button' 
+                : 'bg-signal-surface text-text-muted cursor-not-allowed border border-border-strong'
             }`}
           >
-            Start Recording
-          </button>
-        ) : (
-          <button 
-            onClick={handleStop}
-            className="w-full py-2.5 rounded-md font-medium text-sm bg-signal-surface border border-state-danger/30 text-state-danger hover:bg-state-danger/10 transition-all focus:outline-none focus:ring-2 focus:ring-state-danger/50 shadow-surface"
-          >
-            Stop Recording
+            START RECORDING
           </button>
         )}
         <button 
           onClick={handleDashboard}
-          className="w-full py-2.5 rounded-md font-medium text-sm bg-transparent hover:bg-signal-surface text-text-muted hover:text-text-primary transition-all focus:outline-none"
+          className="w-full py-2 rounded-none font-mono text-[10px] uppercase tracking-widest bg-transparent hover:bg-signal-surface text-text-muted hover:text-text-primary transition-colors focus:outline-none"
         >
           Open Dashboard
         </button>

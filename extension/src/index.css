@@ -1,63 +1,71 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @theme {
-  --color-signal-ink: #0B0F14;
-  --color-signal-surface: #131A21;
-  --color-signal-surface-raised: #1C242D;
+  /* Core Colors */
+  --color-signal-ink: #07090B;      /* Even darker, almost pure black for deep contrast */
+  --color-signal-surface: #0E1216;  /* Extremely subtle surface */
+  --color-signal-surface-raised: #151A20; 
   
-  --color-accent-amber: #F2A93B;
-  --color-accent-amber-dim: #B8791F;
-  --color-accent-cyan-pulse: #4FD8C4;
+  /* Semantic Accents */
+  --color-accent-amber: #F5A623;    /* Refined Amber. ONLY used for brand, primary CTA, and focus */
+  --color-accent-amber-dim: #C88316;
   
-  --color-state-danger: #F0554A;
-  --color-state-success: #10B981;
+  /* State Colors */
+  --color-state-success: #34D399;   /* Green for success */
+  --color-state-info: #38BDF8;      /* Cyan/Blue for info */
+  --color-state-warning: #FBBF24;   /* Gold for warning */
+  --color-state-danger: #EF4444;    /* Red for recording / error */
+  --color-state-neutral: #9CA3AF;   /* Gray for neutral */
   
-  --color-text-primary: #ECEEF0;
-  --color-text-muted: #7C8896;
+  /* Typography Colors */
+  --color-text-primary: #F3F4F6;    /* Crisp off-white */
+  --color-text-secondary: #D1D5DB;  /* Softer text */
+  --color-text-muted: #6B7280;      /* Editorial muted gray */
   
-  --color-border-hairline: rgba(236, 238, 240, 0.07);
+  /* Borders */
+  --color-border-hairline: rgba(255, 255, 255, 0.04);
+  --color-border-strong: rgba(255, 255, 255, 0.1);
+  --color-border-focus: rgba(245, 166, 35, 0.5); /* Amber focus */
 
-  --font-sans: "Manrope", system-ui, sans-serif;
-  --font-display: "Fraunces", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Typography System */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", "Fraunces", "Georgia", serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
 
-  --shadow-glow: 0 0 24px rgba(242, 169, 59, 0.25);
-  --shadow-surface: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(236, 238, 240, 0.05);
-  --shadow-button: 0 0 16px rgba(242, 169, 59, 0.3);
+  /* Premium Layered Shadows */
+  --shadow-glow: 0 0 32px rgba(245, 166, 35, 0.15);
+  --shadow-button: 0 4px 14px rgba(245, 166, 35, 0.25);
+  
+  /* Editorial / Brutalist Surface Elevation */
+  --shadow-surface: 
+    0 1px 2px rgba(0, 0, 0, 0.4), 
+    0 4px 12px rgba(0, 0, 0, 0.5), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
-  --animate-waveform: waveform 1.2s ease-in-out infinite;
-  --animate-shimmer: shimmer 2s linear infinite;
-  --animate-slide-up: slideUp 0.3s ease-out;
+  --shadow-floating: 
+    0 8px 32px rgba(0, 0, 0, 0.8), 
+    0 2px 8px rgba(0, 0, 0, 0.6), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
 
-  --animate-fade-up: fadeUp 0.3s ease-out forwards;
-  --animate-fade-in: fadeIn 0.2s ease-out forwards;
-  --animate-signal-ripple: signalRipple 1s ease-in-out infinite;
-  --animate-spool-sweep: spoolSweep 2s linear infinite;
-  --animate-slide-in-right: slideInRight 0.4s ease-out forwards;
-  --animate-slide-in-bottom: slideInBottom 0.3s ease-out forwards;
+  /* Animation Timings - Elegant, no bounce */
+  --animate-waveform: waveform 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  --animate-shimmer: shimmer 2.5s linear infinite;
+  --animate-fade-in: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-up: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-signal-ripple: signalRipple 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   
   @keyframes fadeUp {
-    0% { transform: translateY(4px); opacity: 0; }
+    0% { transform: translateY(8px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
   @keyframes fadeIn {
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
-  @keyframes signalRipple {
-    0%, 100% { height: 2px; opacity: 0.5; }
-    50% { height: 16px; opacity: 1; }
-  }
-  @keyframes spoolSweep {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes slideInRight {
-    0% { transform: translateX(20px); opacity: 0; }
-    100% { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes slideInBottom {
-    0% { transform: translateY(20px); opacity: 0; }
+  @keyframes slideUp {
+    0% { transform: translateY(16px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
   }
   @keyframes waveform {
@@ -68,9 +76,9 @@
     0% { background-position: -1000px 0; }
     100% { background-position: 1000px 0; }
   }
-  @keyframes slideUp {
-    0% { transform: translateY(8px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+  @keyframes signalRipple {
+    0%, 100% { height: 2px; opacity: 0.3; }
+    50% { height: 16px; opacity: 1; }
   }
 }
 

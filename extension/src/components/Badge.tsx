@@ -8,15 +8,15 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({ children, variant = 'neutral', className = '' }) => {
   const variants = {
-    success: 'bg-state-success/10 text-state-success border border-state-success/20',
-    warning: 'bg-accent-amber/10 text-accent-amber border border-accent-amber/20',
-    error: 'bg-state-danger/10 text-state-danger border border-state-danger/20',
-    neutral: 'bg-signal-surface-raised text-text-muted border border-border-hairline',
-    accent: 'bg-accent-cyan-pulse/10 text-accent-cyan-pulse border border-accent-cyan-pulse/20'
+    success: 'text-state-success border-state-success/30',
+    warning: 'text-state-warning border-state-warning/30',
+    error: 'text-state-danger border-state-danger/30',
+    neutral: 'text-text-muted border-border-strong',
+    accent: 'text-state-info border-state-info/30'
   };
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 border rounded-none font-mono text-[10px] uppercase font-semibold tracking-widest bg-signal-surface ${variants[variant]} ${className}`}>
       {children}
     </span>
   );

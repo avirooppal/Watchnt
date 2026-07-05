@@ -37,8 +37,8 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
         type="button"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="w-full h-10 px-3 bg-signal-surface border border-border-hairline rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-amber/50 flex items-center justify-between transition-colors hover:border-white/20"
-        style={{ backgroundColor: '#131A21' }}
+        className="w-full h-11 px-4 bg-signal-surface border-b border-l-0 border-r-0 border-t-0 border-border-strong rounded-none text-sm font-sans text-text-primary focus:outline-none focus:border-accent-amber flex items-center justify-between transition-colors hover:border-white/20"
+        style={{ backgroundColor: '#0E1216' }}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -68,7 +68,7 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
       </button>
 
       {isOpen && (
-        <div role="listbox" className="absolute z-50 w-full mt-1 bg-signal-surface border border-border-hairline rounded-lg shadow-surface overflow-hidden animate-fade-in origin-top" style={{ backgroundColor: '#131A21', zIndex: 99999 }}>
+        <div role="listbox" className="absolute z-50 w-full mt-1 bg-signal-surface border border-border-strong rounded-none shadow-floating overflow-hidden animate-fade-in origin-top" style={{ backgroundColor: '#0E1216', zIndex: 99999 }}>
           <div className="max-h-60 overflow-y-auto">
             {options.map((option) => (
               <button

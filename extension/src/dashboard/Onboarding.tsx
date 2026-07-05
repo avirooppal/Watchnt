@@ -86,17 +86,17 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-signal-ink flex flex-col items-center justify-center p-6 animate-fade-in text-text-primary selection:bg-accent-amber/20">
-      <div className="w-full max-w-xl bg-signal-surface border border-border-hairline rounded-xl p-10 md:p-14 shadow-surface relative">
+      <div className="w-full max-w-2xl bg-signal-surface border-2 border-border-strong rounded-none p-12 md:p-16 shadow-floating relative">
         
         {/* Progress Bar */}
-        <div className="absolute top-0 left-0 h-1 bg-accent-amber transition-all duration-300 rounded-tl-xl" style={{ width: `${(step / 7) * 100}%` }} />
+        <div className="absolute top-0 left-0 h-1 bg-accent-amber transition-all duration-500 rounded-none" style={{ width: `${(step / 7) * 100}%` }} />
 
         {step === 1 && (
-          <div className="space-y-6 text-center animate-slide-in-right">
-            <div className="w-16 h-16 flex items-center justify-center mx-auto mb-6">
-              <img src="/logo.png" alt="WatchNT Logo" className="w-full h-full rounded-2xl object-cover shadow-lg" />
+          <div className="space-y-8 text-center animate-slide-in-right">
+            <div className="w-20 h-20 flex items-center justify-center mx-auto mb-8">
+              <img src="/logo.png" alt="WatchNT Logo" className="w-full h-full rounded-none object-cover shadow-surface grayscale" />
             </div>
-            <h1 className="text-3xl font-display font-bold tracking-tight">Welcome to WatchNT</h1>
+            <h1 className="text-4xl font-display tracking-tight text-text-primary">Welcome to WatchNT</h1>
             <p className="text-text-muted">The private, open-source AI meeting copilot.</p>
             <div className="pt-8 space-y-3">
               <Button onClick={nextStep} className="w-full" size="lg">Get Started</Button>
@@ -110,8 +110,8 @@ export default function Onboarding() {
         )}
 
         {step === 2 && (
-          <div className="space-y-6 text-center animate-slide-in-right">
-            <h2 className="text-2xl font-display font-bold tracking-tight">What is WatchNT?</h2>
+          <div className="space-y-8 text-center animate-slide-in-right">
+            <h2 className="text-3xl font-display tracking-tight text-text-primary">What is WatchNT?</h2>
             <p className="text-text-muted leading-relaxed">
               WatchNT runs silently in the background during your Google Meets. It reads the live captions directly from your browser—no bots joining the call.
             </p>
@@ -123,9 +123,9 @@ export default function Onboarding() {
         )}
 
         {step === 3 && (
-          <div className="space-y-6 text-center animate-slide-in-right">
-            <h2 className="text-2xl font-display font-bold tracking-tight">How it works</h2>
-            <div className="text-left space-y-4 text-sm text-text-muted bg-black/20 p-6 rounded-lg border border-border-hairline">
+          <div className="space-y-8 text-center animate-slide-in-right">
+            <h2 className="text-3xl font-display tracking-tight text-text-primary">How it works</h2>
+            <div className="text-left space-y-4 text-sm font-sans text-text-muted bg-signal-ink p-8 rounded-none border border-border-strong shadow-inner">
               <div className="flex gap-3"><span className="text-accent-amber">1.</span> Join a meeting and click the WatchNT extension.</div>
               <div className="flex gap-3"><span className="text-accent-amber">2.</span> WatchNT securely scrapes the live captions.</div>
               <div className="flex gap-3"><span className="text-accent-amber">3.</span> After the meeting, it generates a transcript.</div>
@@ -139,8 +139,8 @@ export default function Onboarding() {
         )}
 
         {step === 4 && (
-          <div className="space-y-6 animate-slide-in-right">
-            <h2 className="text-2xl font-display font-bold tracking-tight text-center">Choose AI Provider</h2>
+          <div className="space-y-8 animate-slide-in-right">
+            <h2 className="text-3xl font-display tracking-tight text-text-primary text-center">Choose AI Provider</h2>
             <div className="space-y-4 relative z-50">
               <label className="block text-sm font-medium text-text-muted">Primary LLM Provider</label>
               <Select 
@@ -163,8 +163,8 @@ export default function Onboarding() {
         )}
 
         {step === 5 && (
-          <div className="space-y-6 animate-slide-in-right">
-            <h2 className="text-2xl font-display font-bold tracking-tight text-center">Configure Provider</h2>
+          <div className="space-y-8 animate-slide-in-right">
+            <h2 className="text-3xl font-display tracking-tight text-text-primary text-center">Configure Provider</h2>
             <div className="space-y-4">
               {config.llm_provider === 'ollama' ? (
                 <>
@@ -205,8 +205,8 @@ export default function Onboarding() {
         )}
 
         {step === 6 && (
-          <div className="space-y-6 text-center animate-slide-in-right">
-            <h2 className="text-2xl font-display font-bold tracking-tight">Test Connection</h2>
+          <div className="space-y-8 text-center animate-slide-in-right">
+            <h2 className="text-3xl font-display tracking-tight text-text-primary">Test Connection</h2>
             <p className="text-text-muted text-sm">
               We'll quickly ping your backend and AI provider to make sure everything is wired up correctly.
             </p>
@@ -218,11 +218,11 @@ export default function Onboarding() {
         )}
 
         {step === 7 && (
-          <div className="space-y-6 text-center animate-slide-in-right">
-            <div className="w-16 h-16 rounded-full bg-state-success/10 flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-state-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          <div className="space-y-8 text-center animate-slide-in-right">
+            <div className="w-20 h-20 rounded-none bg-signal-surface border border-state-success/30 flex items-center justify-center mx-auto mb-8">
+              <svg className="w-10 h-10 text-state-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             </div>
-            <h2 className="text-3xl font-display font-bold tracking-tight">Everything Ready</h2>
+            <h2 className="text-4xl font-display tracking-tight text-text-primary">Everything Ready</h2>
             <p className="text-text-muted">
               WatchNT is configured. You can tweak more advanced settings in the Settings page later.
             </p>

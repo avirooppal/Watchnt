@@ -188,24 +188,26 @@ export default function MeetingDetail() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 sm:px-8 py-10 animate-fade-in pb-24">
+    <div className="max-w-4xl mx-auto px-8 sm:px-12 py-16 animate-fade-in pb-32">
       {/* Header */}
-      <div className="flex items-start gap-4 pb-8 mb-8 border-b border-border-hairline">
+      <div className="flex items-start gap-6 pb-12 mb-12 border-b-2 border-border-strong">
         <button 
           onClick={() => navigate('/')}
           aria-label="Go back to library"
-          className="mt-1 shrink-0 p-2 rounded-full hover:bg-signal-surface text-text-muted hover:text-text-primary transition-colors"
+          className="mt-2 shrink-0 p-2 rounded-none hover:bg-signal-surface border border-transparent hover:border-border-strong text-text-muted hover:text-text-primary transition-all duration-300"
         >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
         </button>
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-display font-bold tracking-tight text-text-primary">{metadata?.title || 'Meeting Detail'}</h1>
-            {metadata?.status === 'COMPLETED' ? <Badge variant="success">Completed</Badge> : 
-             metadata?.status === 'FAILED' ? <Badge variant="error">Failed</Badge> : 
-             <Badge variant="neutral">Processing</Badge>}
+          <div className="flex flex-col gap-4 mb-4">
+            <h1 className="text-5xl font-display leading-tight tracking-tight text-text-primary">{metadata?.title || 'Meeting Detail'}</h1>
+            <div className="flex items-center gap-3">
+              {metadata?.status === 'COMPLETED' ? <Badge variant="success">Completed</Badge> : 
+               metadata?.status === 'FAILED' ? <Badge variant="error">Failed</Badge> : 
+               <Badge variant="neutral">Processing</Badge>}
+            </div>
           </div>
-          <p className="text-sm text-text-muted font-medium">
+          <p className="text-sm font-mono tracking-widest uppercase text-text-muted">
             {metadata?.created_at ? new Date(metadata.created_at).toLocaleString(undefined, {
               weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit'
             }) : 'Unknown Date'}
@@ -229,16 +231,16 @@ export default function MeetingDetail() {
       )}
 
       {/* Tabs & Export */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12 border-b border-border-strong pb-2">
+        <div className="flex gap-6 overflow-x-auto pb-2 sm:pb-0 scrollbar-none">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-5 py-2 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`pb-4 text-sm font-sans tracking-wide transition-all whitespace-nowrap border-b-2 ${
                 activeTab === tab.id 
-                  ? 'bg-accent-amber text-white shadow-button' 
-                  : 'text-text-muted hover:text-text-primary hover:bg-signal-surface'
+                  ? 'border-accent-amber text-accent-amber font-semibold' 
+                  : 'border-transparent text-text-muted hover:text-text-primary hover:border-border-strong'
               }`}
             >
               {tab.label}
@@ -246,18 +248,17 @@ export default function MeetingDetail() {
           ))}
         </div>
         
-        <div className="flex items-center gap-2 shrink-0 bg-signal-surface px-3 py-1.5 rounded-lg border border-border-hairline shadow-surface">
-          <svg className="w-4 h-4 text-text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-          <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider mr-1 hidden sm:inline-block">Export</span>
+        <div className="flex items-center gap-2 shrink-0 mb-4 sm:mb-0">
+          <span className="text-[11px] font-mono font-bold text-text-muted uppercase tracking-widest mr-2 hidden sm:inline-block">Export</span>
           <button 
             onClick={() => exportCurrentTab('txt')}
-            className="px-2 py-1 text-xs font-bold rounded bg-signal-ink border border-border-hairline text-text-primary hover:bg-border-hairline hover:text-white transition-colors"
+            className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest rounded-none border border-border-strong text-text-primary hover:bg-signal-surface hover:border-white/20 transition-all duration-300"
           >
             TXT
           </button>
           <button 
             onClick={() => exportCurrentTab('md')}
-            className="px-2 py-1 text-xs font-bold rounded bg-signal-ink border border-border-hairline text-text-primary hover:bg-border-hairline hover:text-white transition-colors"
+            className="px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-widest rounded-none border border-border-strong text-text-primary hover:bg-signal-surface hover:border-white/20 transition-all duration-300"
           >
             MD
           </button>
@@ -265,7 +266,7 @@ export default function MeetingDetail() {
       </div>
 
       {/* Content Area */}
-      <div className="bg-signal-surface border border-border-hairline rounded-xl p-8 shadow-surface min-h-[400px]">
+      <div className="bg-signal-surface border border-border-strong rounded-none p-12 shadow-surface min-h-[500px]">
         {activeTab === 'summary' && (
           <div className="prose prose-invert prose-watchnt max-w-none text-text-primary/90 leading-relaxed">
             {summary ? (
@@ -291,30 +292,28 @@ export default function MeetingDetail() {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{actions}</ReactMarkdown>
               </div>
             ) : Array.isArray(actions) ? (
-              <div className="grid gap-4">
+              <div className="grid gap-6">
                 {actions.map((action: any, i: number) => (
-                  <div key={i} className="p-5 rounded-lg bg-signal-ink border border-border-hairline flex flex-col gap-3 group hover:border-white/20 transition-colors">
+                  <div key={i} className="p-6 bg-signal-ink border border-border-strong flex flex-col gap-4 group hover:border-white/20 transition-all duration-300">
                     <div className="flex justify-between items-start gap-4">
-                      <span className="font-medium text-base text-text-primary group-hover:text-accent-amber-dim transition-colors">{action.task}</span>
+                      <span className="font-sans font-medium text-lg text-text-primary group-hover:text-accent-amber transition-colors">{action.task}</span>
                       {action.priority && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider shrink-0 ${
-                          action.priority.toLowerCase() === 'high' ? 'bg-state-danger/10 text-state-danger border border-state-danger/20' :
-                          action.priority.toLowerCase() === 'medium' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' :
-                          'bg-state-success/10 text-state-success border border-state-success/20'
+                        <span className={`px-2 py-0.5 border text-[10px] uppercase font-mono tracking-widest shrink-0 ${
+                          action.priority.toLowerCase() === 'high' ? 'border-state-danger/30 text-state-danger' :
+                          action.priority.toLowerCase() === 'medium' ? 'border-state-warning/30 text-state-warning' :
+                          'border-state-success/30 text-state-success'
                         }`}>
                           {action.priority}
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-4 text-xs font-semibold text-text-muted pt-2">
-                      <span className="flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                        {action.owner}
+                    <div className="flex gap-6 text-xs font-mono tracking-widest text-text-muted pt-3 border-t border-border-strong">
+                      <span className="flex items-center gap-2 uppercase">
+                        OWNER: <span className="text-text-primary">{action.owner}</span>
                       </span>
                       {action.deadline && action.deadline.toLowerCase() !== 'none' && (
-                        <span className="flex items-center gap-1.5 text-accent-amber-dim">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          {action.deadline}
+                        <span className="flex items-center gap-2 uppercase">
+                          DUE: <span className="text-accent-amber-dim">{action.deadline}</span>
                         </span>
                       )}
                     </div>
@@ -357,7 +356,7 @@ export default function MeetingDetail() {
         {activeTab === 'email' && (
           <div>
             {email ? (
-              <div className="prose prose-invert prose-watchnt max-w-none text-text-primary/90 leading-relaxed bg-signal-ink p-6 rounded-lg border border-border-hairline">
+              <div className="prose prose-invert prose-watchnt max-w-none text-text-primary leading-relaxed bg-signal-ink p-8 rounded-none border-2 border-border-strong">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{email}</ReactMarkdown>
               </div>
             ) : (

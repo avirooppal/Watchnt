@@ -116,14 +116,14 @@ export default function Settings() {
     <div className="max-w-6xl mx-auto flex h-[calc(100vh-80px)] overflow-hidden bg-signal-ink text-text-primary">
       
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-border-hairline shrink-0 py-8 px-4 flex flex-col gap-2">
-        <h2 className="text-xl font-display font-bold tracking-tight mb-4 px-3">Settings</h2>
+      <aside className="w-64 border-r border-border-strong shrink-0 py-12 px-6 flex flex-col gap-3">
+        <h2 className="text-3xl font-display tracking-tight mb-6 px-4">Settings</h2>
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.id ? 'bg-signal-surface text-text-primary border border-border-hairline shadow-surface' : 'text-text-muted hover:bg-signal-surface-raised hover:text-text-primary'
+            className={`w-full text-left px-4 py-3 rounded-none text-sm font-sans tracking-wide transition-colors ${
+              activeTab === tab.id ? 'bg-signal-surface text-accent-amber border-l-2 border-accent-amber shadow-surface' : 'text-text-muted hover:bg-signal-surface-raised hover:text-text-primary border-l-2 border-transparent'
             }`}
           >
             {tab.label}
@@ -132,11 +132,11 @@ export default function Settings() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-8 lg:p-12 scrollbar-thin">
-        <div className="max-w-2xl space-y-12 pb-24">
+      <main className="flex-1 overflow-y-auto p-12 lg:p-16 scrollbar-thin">
+        <div className="max-w-3xl space-y-16 pb-32">
           
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-display font-bold tracking-tight">
+          <div className="flex items-center justify-between border-b-2 border-border-strong pb-6">
+            <h3 className="text-4xl font-display tracking-tight">
               {TABS.find(t => t.id === activeTab)?.label}
             </h3>
             <div className="flex gap-3">
@@ -146,19 +146,19 @@ export default function Settings() {
           </div>
 
           {testResults && activeTab === 'ai_providers' && (
-            <div className="bg-signal-surface border border-border-hairline rounded-lg p-6 space-y-4 shadow-surface animate-fade-in">
-              <h4 className="font-semibold">Test Results</h4>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="bg-signal-surface border border-border-strong rounded-none p-8 space-y-6 shadow-floating animate-fade-in">
+              <h4 className="font-sans text-lg font-medium">Test Results</h4>
+              <div className="grid grid-cols-2 gap-6">
                 {Object.entries(testResults).map(([key, result]: [string, any]) => (
-                  <div key={key} className="flex items-start gap-3 p-3 rounded-md bg-signal-ink border border-border-hairline">
+                  <div key={key} className="flex items-start gap-4 p-4 rounded-none bg-signal-ink border border-border-strong">
                     {result.status === 'ok' ? (
-                      <div className="text-state-success mt-0.5"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg></div>
+                      <div className="text-state-success mt-1"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>
                     ) : (
-                      <div className="text-state-danger mt-0.5"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg></div>
+                      <div className="text-state-danger mt-1"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></div>
                     )}
                     <div>
-                      <p className="text-sm font-semibold capitalize">{key}</p>
-                      <p className="text-xs text-text-muted mt-1">{result.message}</p>
+                      <p className="text-sm font-sans font-medium capitalize">{key}</p>
+                      <p className="text-xs font-mono text-text-muted mt-2">{result.message}</p>
                     </div>
                   </div>
                 ))}

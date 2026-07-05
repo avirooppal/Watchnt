@@ -11,12 +11,14 @@ class MeetingResponse(BaseModel):
     status: str
     job_id: Optional[str] = None
     created_at: datetime
+    folder_id: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 class MeetingUpdate(BaseModel):
     title: Optional[str] = None
+    folder_id: Optional[str] = None
 
 class ChatMessage(BaseModel):
     role: str

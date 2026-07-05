@@ -11,6 +11,14 @@ class Meeting(Base):
     status = Column(String, default="RECORDING")
     job_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+    folder_id = Column(String, nullable=True)
+
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 class Settings(Base):
     __tablename__ = "settings"

@@ -74,13 +74,14 @@ Transcript:
             return json.dumps(validated_items)
         except Exception as e:
             logger.error(f"Action item validation failed: {e}", exc_info=True)
-            raise ValueError(f"Failed to extract valid Action Items JSON: {e}")
+            # Fallback to returning the raw response string as a JSON string
+            return json.dumps(response_text)
             
     async def generate_email(self, summary: str, actions_json_str: str) -> str:
         settings = self._get_settings()
         
         if settings.email_prompt_template:
-            prompt = settings.email_prompt_template.format(summary=summary, actions=actions_json_str)
+            prompt = settings.email_prompt_template.replace("{summary}", summary).replace("{actions}", actions_json_str)
         else:
             prompt = f"""Draft a professional follow-up email for the meeting based on the summary and action items below.
 Format the output as plain text. Do not use HTML tags or markdown code blocks.

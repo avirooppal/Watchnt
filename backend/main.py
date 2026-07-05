@@ -9,6 +9,7 @@ from api.actions import router as actions_router
 from api.email import router as email_router
 from api.realtime import router as realtime_router
 from api.config import router as config_router
+from api.folder import router as folder_router
 from database.db import init_db
 
 init_db()
@@ -38,6 +39,7 @@ app.include_router(actions_router)
 app.include_router(email_router)
 app.include_router(realtime_router)
 app.include_router(config_router)
+app.include_router(folder_router)
 
 @app.get("/")
 def read_root():

@@ -55,6 +55,7 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
     if os.path.exists(metadata_path):
         with open(metadata_path, "r", encoding="utf-8") as f:
             data["metadata"] = json.load(f)
+            data["metadata"]["status"] = meeting.status
             
     summary_path = os.path.join(meeting_dir, "summary.md")
     if os.path.exists(summary_path):
@@ -98,8 +99,10 @@ def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = De
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
         
-    if update_data.title:
+    if update_data.title is not None:
         meeting.title = update_data.title
+    if update_data.folder_id is not None:
+        meeting.folder_id = update_data.folder_id
         
     db.commit()
     db.refresh(meeting)

@@ -7,11 +7,11 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input: React.FC<InputProps> = ({ label, error, className = '', ...props }) => {
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      {label && <label className="text-xs font-medium text-text-muted">{label}</label>}
+    <div className="flex flex-col gap-2 w-full">
+      {label && <label className="text-[11px] font-mono tracking-widest uppercase text-text-muted">{label}</label>}
       <input 
-        className={`w-full px-3 py-2 bg-signal-surface border rounded-md text-sm text-text-primary placeholder-text-muted/50 focus:outline-none focus:ring-2 focus:ring-accent-amber/50 transition-colors ${
-          error ? 'border-state-danger' : 'border-border-hairline hover:border-white/20'
+        className={`w-full px-4 py-2.5 bg-signal-surface border-b border-l-0 border-r-0 border-t-0 rounded-none text-sm font-sans text-text-primary placeholder-text-muted/50 focus:outline-none focus:border-accent-amber transition-colors duration-300 ${
+          error ? 'border-state-danger' : 'border-border-strong hover:border-white/20'
         } ${className}`}
         {...props}
       />
