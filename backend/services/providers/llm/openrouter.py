@@ -24,6 +24,8 @@ class OpenRouterProvider(LLMProvider):
             response = await client.post(self.url, headers=headers, json=data)
             if response.status_code == 200:
                 result = response.json()
+                if "choices" not in result:
+                    raise RuntimeError(f"Unexpected response from OpenRouter (missing 'choices'): {result}")
                 return result["choices"][0]["message"]["content"]
             else:
                 raise RuntimeError(f"OpenRouter API error: {response.status_code} - {response.text}")
