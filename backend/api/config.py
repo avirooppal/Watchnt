@@ -7,15 +7,9 @@ import httpx
 import os
 import tempfile
 
+from core.deps import get_db
+
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
 def _get_or_create_settings(db: Session) -> Settings:
     settings = db.query(Settings).filter(Settings.id == "default").first()
     if not settings:

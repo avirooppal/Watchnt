@@ -2,8 +2,10 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Background
 from sqlalchemy.orm import Session
 from fastapi import Depends
 import os
-import shutil
+import json
 import uuid
+from core.deps import get_db
+from core.paths import MEETINGS_DIR
 from database.db import SessionLocal
 from database.models import Meeting
 from schemas.status import MeetingStatus
@@ -11,17 +13,6 @@ from services.pipeline_service import PipelineService
 
 router = APIRouter()
 pipeline_service = PipelineService()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
-
 @router.post("/upload_transcript")
 async def upload_transcript(
     background_tasks: BackgroundTasks,
@@ -41,7 +32,6 @@ async def upload_transcript(
     
     transcript_path = os.path.join(meeting_dir, "transcript.json")
     
-    import json
     with open(transcript_path, "w", encoding="utf-8") as f:
         # Wrap the array in {"segments": ...}
         parsed = json.loads(transcript_json)

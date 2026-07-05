@@ -46,10 +46,29 @@ export default function Onboarding() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const payload: Record<string, string> = {};
+      const keyFields = [
+        "openai_api_key",
+        "groq_api_key",
+        "gemini_api_key",
+        "openrouter_api_key",
+      ];
+
+      for (const [key, value] of Object.entries(config)) {
+        if (
+          keyFields.includes(key) &&
+          typeof value === "string" &&
+          value.includes("****")
+        ) {
+          continue;
+        }
+        payload[key] = value;
+      }
+
       const res = await fetch('http://localhost:8000/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         chrome.storage.local.set({ onboardingComplete: true }, () => {
@@ -79,8 +98,13 @@ export default function Onboarding() {
             </div>
             <h1 className="text-3xl font-display font-bold tracking-tight">Welcome to WatchNT</h1>
             <p className="text-text-muted">The private, open-source AI meeting copilot.</p>
-            <div className="pt-8">
+            <div className="pt-8 space-y-3">
               <Button onClick={nextStep} className="w-full" size="lg">Get Started</Button>
+              <button onClick={() => {
+                chrome.storage.local.set({ onboardingComplete: true }, () => navigate('/'));
+              }} className="text-sm text-text-muted hover:text-text-primary transition-colors">
+                Skip Onboarding
+              </button>
             </div>
           </div>
         )}

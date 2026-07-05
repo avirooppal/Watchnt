@@ -5,6 +5,10 @@ from database.models import Settings
 from services.providers.transcription_factory import TranscriptionProviderFactory
 from typing import List, Dict
 
+from core.logging import get_logger
+
+logger = get_logger(__name__)
+
 class TranscriptionService:
     def __init__(self):
         pass
@@ -25,7 +29,7 @@ class TranscriptionService:
             output = subprocess.check_output(cmd).decode().strip()
             return int(output)
         except Exception as e:
-            print(f"Failed to get channel count: {e}")
+            logger.error(f"Failed to get channel count: {e}", exc_info=True)
             return 1
 
     def _split_channels(self, audio_path: str, left_path: str, right_path: str):
@@ -44,7 +48,7 @@ class TranscriptionService:
         channel_count = self._get_channel_count(audio_path)
         
         if channel_count == 2:
-            print(f"Stereo audio detected, splitting channels for diarization...")
+            logger.info(f"Stereo audio detected, splitting channels for diarization...")
             base_dir = os.path.dirname(audio_path)
             left_path = os.path.join(base_dir, "left.wav")
             right_path = os.path.join(base_dir, "right.wav")
@@ -52,10 +56,10 @@ class TranscriptionService:
             try:
                 self._split_channels(audio_path, left_path, right_path)
                 
-                print("Transcribing Left channel (Others)...")
+                logger.info("Transcribing Left channel (Others)...")
                 left_segments = provider.transcribe(left_path)
                 
-                print("Transcribing Right channel (Me)...")
+                logger.info("Transcribing Right channel (Me)...")
                 right_segments = provider.transcribe(right_path)
                 
                 for seg in left_segments:
@@ -68,7 +72,7 @@ class TranscriptionService:
                 combined.sort(key=lambda x: x["start"])
                 return combined
             except Exception as e:
-                print(f"Channel splitting failed, falling back to mono transcription: {e}")
+                logger.error(f"Channel splitting failed, falling back to mono transcription: {e}", exc_info=True)
                 # Fall through to mono
                 
         # Mono transcription (or fallback)

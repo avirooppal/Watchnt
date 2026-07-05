@@ -5,8 +5,7 @@ from config import settings
 import json
 import os
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
+from core.paths import MEETINGS_DIR
 
 class EmailService:
     def __init__(self):

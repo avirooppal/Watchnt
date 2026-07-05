@@ -3,12 +3,10 @@ import os
 import json
 from services.llm_service import LLMService
 
+from core.paths import MEETINGS_DIR
+
 router = APIRouter()
 llm_service = LLMService()
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
-
 @router.post("/actions/{meeting_id}")
 async def generate_actions(meeting_id: str):
     meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)

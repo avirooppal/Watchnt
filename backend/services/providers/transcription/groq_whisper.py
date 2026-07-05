@@ -4,6 +4,9 @@ from services.providers.transcription.base import TranscriptionProvider
 import tempfile
 import shutil
 
+from core.logging import get_logger
+logger = get_logger(__name__)
+
 class GroqWhisperProvider(TranscriptionProvider):
     def __init__(self, api_key: str, model: str = "whisper-large-v3"):
         if not api_key:
@@ -13,7 +16,7 @@ class GroqWhisperProvider(TranscriptionProvider):
         self.url = "https://api.groq.com/openai/v1/audio/transcriptions"
 
     def transcribe(self, audio_path: str) -> List[Dict]:
-        print(f"Transcribing {audio_path} via Groq ({self.model})...")
+        logger.info(f"Transcribing {audio_path} via Groq ({self.model})...")
         
         headers = {
             "Authorization": f"Bearer {self.api_key}"

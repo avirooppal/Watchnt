@@ -78,6 +78,18 @@ export const Bot: React.FC = () => {
     return () => chrome.storage.onChanged.removeListener(listener);
   }, []);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRecording) {
+        e.preventDefault();
+        e.returnValue = "You have an active recording. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isRecording]);
+
   const uploadTranscript = async (transcript: any[]) => {
     try {
       const createRes = await fetch('http://localhost:8000/meeting', {

@@ -2,6 +2,9 @@ import httpx
 from typing import List, Dict
 from services.providers.transcription.base import TranscriptionProvider
 
+from core.logging import get_logger
+logger = get_logger(__name__)
+
 class OpenAIWhisperProvider(TranscriptionProvider):
     def __init__(self, api_key: str, model: str = "whisper-1"):
         if not api_key:
@@ -11,7 +14,7 @@ class OpenAIWhisperProvider(TranscriptionProvider):
         self.url = "https://api.openai.com/v1/audio/transcriptions"
 
     def transcribe(self, audio_path: str) -> List[Dict]:
-        print(f"Transcribing {audio_path} via OpenAI ({self.model})...")
+        logger.info(f"Transcribing {audio_path} via OpenAI ({self.model})...")
         
         headers = {
             "Authorization": f"Bearer {self.api_key}"

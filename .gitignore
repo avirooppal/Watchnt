@@ -34,3 +34,14 @@ Thumbs.db
 tasks.md
 transcriptonic/
 architecture.md
+DESIGN_SYSTEM.md
+
+# Database
+backend/watchnt.db
+*.db
+
+# Large media
+*.mp4
+
+# Generated
+extension/test.css

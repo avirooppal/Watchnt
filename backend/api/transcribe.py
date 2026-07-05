@@ -3,12 +3,10 @@ import os
 import json
 from services.transcription_service import TranscriptionService
 
+from core.paths import MEETINGS_DIR
+
 router = APIRouter()
 transcription_service = TranscriptionService()
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
-
 @router.post("/transcribe/{meeting_id}")
 async def transcribe_audio(meeting_id: str):
     meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Bot } from './Bot';
 import type { PlatformHandler } from './base';
 import { GoogleMeetHandler } from './googleMeet';
+import './calendar';
 import '../index.css';
 
 console.log("WatchNT: Content script loaded! Injecting Bot UI...");
@@ -65,6 +66,14 @@ function mountBot() {
     reactRoot = createRoot(rootElement);
     reactRoot.render(<Bot />);
     console.log("WatchNT: Bot mounted successfully!");
+    
+    // Check for calendar auto-record intent
+    chrome.storage.local.get(['autoRecordNext'], (res) => {
+      if (res.autoRecordNext) {
+        console.log("WatchNT: Auto-record triggered from calendar integration!");
+        chrome.storage.local.set({ autoRecordNext: false, isRecording: true });
+      }
+    });
   } catch (err) {
     console.error("WatchNT: Failed to mount bot React app:", err);
   }

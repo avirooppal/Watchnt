@@ -17,3 +17,10 @@ class MeetingResponse(BaseModel):
 
 class MeetingUpdate(BaseModel):
     title: Optional[str] = None
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]

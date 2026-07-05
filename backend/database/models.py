@@ -10,7 +10,7 @@ class Meeting(Base):
     title = Column(String, index=True)
     status = Column(String, default="RECORDING")
     job_id = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 class Settings(Base):
     __tablename__ = "settings"
@@ -26,3 +26,5 @@ class Settings(Base):
     groq_api_key = Column(String, default="")
     gemini_api_key = Column(String, default="")
     openrouter_api_key = Column(String, default="")
+    summary_prompt_template = Column(String, default="")
+    email_prompt_template = Column(String, default="")

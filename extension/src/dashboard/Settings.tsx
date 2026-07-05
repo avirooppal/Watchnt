@@ -25,7 +25,9 @@ export default function Settings() {
     openai_api_key: '',
     groq_api_key: '',
     gemini_api_key: '',
-    openrouter_api_key: ''
+    openrouter_api_key: '',
+    summary_prompt_template: '',
+    email_prompt_template: ''
   });
 
   const [testResults, setTestResults] = useState<any>(null);
@@ -44,10 +46,29 @@ export default function Settings() {
     setSaving(true);
     localStorage.setItem('backendUrl', backendApiUrl);
     try {
+      const payload: Record<string, string> = {};
+      const keyFields = [
+        "openai_api_key",
+        "groq_api_key",
+        "gemini_api_key",
+        "openrouter_api_key",
+      ];
+
+      for (const [key, value] of Object.entries(config)) {
+        if (
+          keyFields.includes(key) &&
+          typeof value === "string" &&
+          value.includes("****")
+        ) {
+          continue;
+        }
+        payload[key] = value;
+      }
+
       const res = await fetch(`${backendApiUrl}/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         showToast('Settings saved successfully.', 'success');
@@ -77,6 +98,7 @@ export default function Settings() {
   const TABS = [
     { id: 'general', label: 'General' },
     { id: 'ai_providers', label: 'AI Providers' },
+    { id: 'templates', label: 'Templates' },
     { id: 'recording', label: 'Recording' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'advanced', label: 'Advanced' }
@@ -174,14 +196,59 @@ export default function Settings() {
 
                 <section className="space-y-4">
                   <div>
-                    <h4 className="text-lg font-semibold">API Keys</h4>
-                    <p className="text-sm text-text-muted">Configure cloud providers for generation or transcription.</p>
+                    <h4 className="text-lg font-semibold">API Configuration</h4>
+                    <p className="text-sm text-text-muted">Configure your selected provider.</p>
                   </div>
                   <div className="space-y-4">
-                    <Input type="password" label="OpenAI API Key" value={config.openai_api_key} onChange={(e) => setConfig({...config, openai_api_key: e.target.value})} />
-                    <Input type="password" label="Groq API Key" value={config.groq_api_key} onChange={(e) => setConfig({...config, groq_api_key: e.target.value})} />
-                    <Input type="password" label="Gemini API Key" value={config.gemini_api_key} onChange={(e) => setConfig({...config, gemini_api_key: e.target.value})} />
-                    <Input type="password" label="OpenRouter API Key" value={config.openrouter_api_key} onChange={(e) => setConfig({...config, openrouter_api_key: e.target.value})} />
+                    {config.llm_provider === 'ollama' && (
+                      <Input label="Local Ollama Base URL" value={config.ollama_base_url} onChange={(e) => setConfig({...config, ollama_base_url: e.target.value})} />
+                    )}
+                    {config.llm_provider === 'openai' && (
+                      <Input type="password" label="OpenAI API Key" value={config.openai_api_key} onChange={(e) => setConfig({...config, openai_api_key: e.target.value})} />
+                    )}
+                    {config.llm_provider === 'groq' && (
+                      <Input type="password" label="Groq API Key" value={config.groq_api_key} onChange={(e) => setConfig({...config, groq_api_key: e.target.value})} />
+                    )}
+                    {config.llm_provider === 'gemini' && (
+                      <Input type="password" label="Gemini API Key" value={config.gemini_api_key} onChange={(e) => setConfig({...config, gemini_api_key: e.target.value})} />
+                    )}
+                    {config.llm_provider === 'openrouter' && (
+                      <Input type="password" label="OpenRouter API Key" value={config.openrouter_api_key} onChange={(e) => setConfig({...config, openrouter_api_key: e.target.value})} />
+                    )}
+                  </div>
+                </section>
+             </div>
+          )}
+          
+          {activeTab === 'templates' && (
+             <div className="space-y-10 animate-fade-in">
+                <section className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold">Summary Prompt Template</h4>
+                    <p className="text-sm text-text-muted">Available variables: {'{transcript}'}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <textarea 
+                      className="w-full h-32 p-3 bg-signal-ink border border-border-hairline rounded-md text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary" 
+                      value={config.summary_prompt_template} 
+                      onChange={(e) => setConfig({...config, summary_prompt_template: e.target.value})} 
+                      placeholder="e.g., Summarize this meeting in 3 bullet points: {transcript}"
+                    />
+                  </div>
+                </section>
+                <hr className="border-border-hairline" />
+                <section className="space-y-4">
+                  <div>
+                    <h4 className="text-lg font-semibold">Email Prompt Template</h4>
+                    <p className="text-sm text-text-muted">Available variables: {'{summary}'}, {'{actions}'}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <textarea 
+                      className="w-full h-32 p-3 bg-signal-ink border border-border-hairline rounded-md text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-brand-primary" 
+                      value={config.email_prompt_template} 
+                      onChange={(e) => setConfig({...config, email_prompt_template: e.target.value})} 
+                      placeholder="e.g., Draft a follow-up email based on this summary: {summary} and actions: {actions}"
+                    />
                   </div>
                 </section>
              </div>
@@ -202,7 +269,6 @@ export default function Settings() {
                   </div>
                   <div className="space-y-4">
                     <Input label="Backend API URL" value={backendApiUrl} onChange={(e) => setBackendApiUrl(e.target.value)} />
-                    <Input label="Local Ollama Base URL" value={config.ollama_base_url} onChange={(e) => setConfig({...config, ollama_base_url: e.target.value})} />
                   </div>
                </section>
             </div>

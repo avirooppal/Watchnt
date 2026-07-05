@@ -3,6 +3,9 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
+from core.logging import get_logger
+logger = get_logger(__name__)
+
 SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./watchnt.db")
 
 engine = create_engine(
@@ -14,7 +17,7 @@ Base = declarative_base()
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    print("Database initialized. File should exist at watchnt.db")
+    logger.info("Database initialized. File should exist at watchnt.db")
 
 if __name__ == "__main__":
     init_db()

@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import type { Meeting } from '../../../shared/types/meeting';
 import { Skeleton } from '../components/Skeleton';
 import { Input } from '../components/Input';
 import { Badge } from '../components/Badge';
 import { Select } from '../components/Select';
+import { Button } from '../components/Button';
 
 export default function MeetingList() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [insights, setInsights] = useState<{total_meetings: number, total_actions: number, meetings_this_week: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'a-z'>('newest');
@@ -28,13 +30,30 @@ export default function MeetingList() {
     }
   };
 
+  const fetchInsights = async () => {
+    try {
+      const storedBackend = localStorage.getItem('backendUrl') || 'http://localhost:8000';
+      const res = await fetch(`${storedBackend}/meetings/insights`);
+      if (res.ok) {
+        const data = await res.json();
+        setInsights(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchMeetings();
-    const interval = setInterval(fetchMeetings, 5000);
+    fetchInsights();
+    const interval = setInterval(() => {
+      fetchMeetings();
+      fetchInsights();
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = async (e: React.MouseEvent | React.KeyboardEvent, id: string) => {
     e.preventDefault();
     if (!window.confirm("Are you sure you want to delete this meeting?")) return;
     
@@ -47,7 +66,7 @@ export default function MeetingList() {
     }
   };
 
-  const startRename = (e: React.MouseEvent, meeting: Meeting) => {
+  const startRename = (e: React.MouseEvent | React.KeyboardEvent, meeting: Meeting) => {
     e.preventDefault();
     setEditingId(meeting.id);
     setEditTitle(meeting.title);
@@ -73,28 +92,28 @@ export default function MeetingList() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'COMPLETED': return <Badge variant="success">Completed</Badge>;
-      case 'FAILED': return <Badge variant="error">Failed</Badge>;
+      case 'COMPLETED': return <span title="Pipeline finished successfully"><Badge variant="success">Completed</Badge></span>;
+      case 'FAILED': return <span title="An error occurred during transcription or generation"><Badge variant="error">Failed</Badge></span>;
       case 'RECORDING': return (
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-state-danger bg-state-danger/10 px-2 py-0.5 rounded-full border border-state-danger/20">
+        <span title="Currently capturing audio from the meeting" className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-state-danger bg-state-danger/10 px-2 py-0.5 rounded-full border border-state-danger/20">
           <div className="w-1.5 h-1.5 rounded-full bg-state-danger animate-pulse" /> Recording
         </span>
       );
       default: return (
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-accent-amber-dim bg-accent-amber/10 px-2 py-0.5 rounded-full border border-accent-amber/20">
-          <div className="w-2 h-2 rounded-full border-2 border-accent-amber-dim border-t-transparent animate-spin" /> Processing
+        <span title={`Processing step: ${status}`} className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-accent-amber-dim bg-accent-amber/10 px-2 py-0.5 rounded-full border border-accent-amber/20">
+          <div className="w-2 h-2 rounded-full border-2 border-accent-amber-dim border-t-transparent animate-spin" /> {status}
         </span>
       );
     }
   };
 
-  const filteredAndSortedMeetings = meetings
-    .filter(m => m.title?.toLowerCase().includes(search.toLowerCase()))
+  const filteredAndSortedMeetings = useMemo(() => meetings
+    .filter(m => m.title?.toLowerCase().includes(search.toLowerCase()) || m.status?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       return a.title.localeCompare(b.title);
-    });
+    }), [meetings, search, sortBy]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 sm:px-8 py-12 animate-fade-in">
@@ -103,6 +122,26 @@ export default function MeetingList() {
           <h2 className="text-3xl font-display font-bold tracking-tight text-text-primary">Meeting Library</h2>
           <p className="mt-2 text-text-muted font-medium text-sm">Review your past conversations and generated insights.</p>
         </div>
+        
+        {insights && (
+          <div className="flex items-center gap-6 hidden lg:flex bg-signal-surface border border-border-hairline rounded-lg px-6 py-3 shadow-sm">
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-text-primary">{insights.total_meetings}</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-text-muted">Meetings</span>
+            </div>
+            <div className="w-px h-8 bg-border-hairline"></div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-accent-amber">{insights.total_actions}</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-text-muted">Actions</span>
+            </div>
+            <div className="w-px h-8 bg-border-hairline"></div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold text-state-success">{insights.meetings_this_week}</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-text-muted">This Week</span>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center gap-3 w-full md:w-auto">
           <Select 
             value={sortBy} 
@@ -115,7 +154,7 @@ export default function MeetingList() {
             className="w-full md:w-40"
           />
           <Input 
-            placeholder="Search meetings..." 
+            placeholder="Search meetings (e.g. 'failed')" 
             value={search} 
             onChange={(e) => setSearch(e.target.value)}
             className="w-full md:w-64 bg-signal-surface shadow-surface"
@@ -133,7 +172,11 @@ export default function MeetingList() {
              <svg className="w-6 h-6 text-accent-amber" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
           </div>
           <h3 className="text-lg font-display font-bold text-text-primary mb-1">No meetings yet.</h3>
-          <p className="text-text-muted text-sm max-w-sm">Join a Google Meet, click the WatchNT extension, and press Start Recording. Your meetings will appear here.</p>
+          <p className="text-text-muted text-sm max-w-sm mb-6">Join a Google Meet, click the WatchNT extension, and press Start Recording. Your meetings will appear here.</p>
+          <div className="flex gap-4">
+            <Button variant="secondary" onClick={() => window.open('https://github.com/cameronking4/watchnt', '_blank')}>Read Documentation</Button>
+            <Button variant="ghost" onClick={() => window.open('https://youtube.com', '_blank')}>Watch Demo</Button>
+          </div>
         </div>
       ) : filteredAndSortedMeetings.length === 0 ? (
         <div className="py-20 text-center text-text-muted text-sm">
@@ -170,11 +213,23 @@ export default function MeetingList() {
                 )}
                 
                 {!editingId && (
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => startRename(e, meeting)} className="text-text-muted hover:text-white transition-colors" title="Rename">
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => startRename(e, meeting)} 
+                      onKeyDown={(e) => e.key === 'Enter' && startRename(e, meeting)}
+                      className="text-text-muted hover:text-white transition-colors" 
+                      title="Rename"
+                      aria-label="Rename meeting"
+                    >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                     </button>
-                    <button onClick={(e) => handleDelete(e, meeting.id)} className="text-state-danger/70 hover:text-state-danger transition-colors" title="Delete">
+                    <button 
+                      onClick={(e) => handleDelete(e, meeting.id)} 
+                      onKeyDown={(e) => e.key === 'Enter' && handleDelete(e, meeting.id)}
+                      className="text-state-danger/70 hover:text-state-danger transition-colors" 
+                      title="Delete"
+                      aria-label="Delete meeting"
+                    >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>

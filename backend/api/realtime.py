@@ -4,13 +4,16 @@ from services.llm_service import LLMService
 import tempfile
 import os
 
+from core.logging import get_logger
+logger = get_logger(__name__)
+
 router = APIRouter()
 transcription_service = TranscriptionService()
 
 @router.websocket("/ws/transcribe")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    print("WebSocket connection established")
+    logger.info("WebSocket connection established")
     
     temp_dir = tempfile.gettempdir()
     session_id = id(websocket)
@@ -22,7 +25,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             # Receive audio chunk from frontend
             data = await websocket.receive_bytes()
-            print(f"Received chunk of {len(data)} bytes")
+            logger.info(f"Received chunk of {len(data)} bytes")
             
             # Save JUST this chunk to a temporary file
             with open(temp_audio_path, "wb") as f:
@@ -42,12 +45,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     await websocket.send_json({"transcript": combined_text})
                 
             except Exception as e:
-                print(f"Transcription error: {e}")
+                logger.error(f"Transcription error: {e}", exc_info=True)
                 
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        logger.info("WebSocket disconnected")
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {e}", exc_info=True)
     finally:
         if os.path.exists(temp_audio_path):
             try:

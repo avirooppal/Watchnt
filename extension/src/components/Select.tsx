@@ -35,9 +35,26 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
     <div className={`relative z-50 ${className}`} ref={containerRef} style={{ position: 'relative', zIndex: 9999 }}>
       <button
         type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="w-full h-10 px-3 bg-signal-surface border border-border-hairline rounded-lg text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-amber/50 flex items-center justify-between transition-colors hover:border-white/20"
         style={{ backgroundColor: '#131A21' }}
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen((prev) => !prev);
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setIsOpen(true);
+            setTimeout(() => {
+              const firstOption = containerRef.current?.querySelector('[role="option"]') as HTMLElement;
+              firstOption?.focus();
+            }, 0);
+          } else if (e.key === 'Escape') {
+            setIsOpen(false);
+          }
+        }}
       >
         <span className="truncate">{selectedOption?.label}</span>
         <svg 
@@ -51,12 +68,14 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-signal-surface border border-border-hairline rounded-lg shadow-surface overflow-hidden animate-fade-in origin-top" style={{ backgroundColor: '#131A21', zIndex: 99999 }}>
+        <div role="listbox" className="absolute z-50 w-full mt-1 bg-signal-surface border border-border-hairline rounded-lg shadow-surface overflow-hidden animate-fade-in origin-top" style={{ backgroundColor: '#131A21', zIndex: 99999 }}>
           <div className="max-h-60 overflow-y-auto">
             {options.map((option) => (
               <button
                 key={option.value}
                 type="button"
+                role="option"
+                aria-selected={option.value === value}
                 className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-signal-surface-raised hover:text-white ${
                   option.value === value 
                     ? 'bg-signal-surface-raised text-accent-amber font-medium' 
@@ -65,6 +84,28 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onChange(option.value);
+                    setIsOpen(false);
+                    const trigger = containerRef.current?.querySelector('button[aria-haspopup="listbox"]') as HTMLElement;
+                    trigger?.focus();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsOpen(false);
+                    const trigger = containerRef.current?.querySelector('button[aria-haspopup="listbox"]') as HTMLElement;
+                    trigger?.focus();
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const next = e.currentTarget.nextElementSibling as HTMLElement;
+                    next?.focus();
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prev = e.currentTarget.previousElementSibling as HTMLElement;
+                    prev?.focus();
+                  }
                 }}
               >
                 {option.label}

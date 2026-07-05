@@ -8,8 +8,10 @@ from database.db import SessionLocal
 from database.models import Meeting
 from schemas.status import MeetingStatus
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
+from core.paths import MEETINGS_DIR
+
+from core.logging import get_logger
+logger = get_logger(__name__)
 
 class PipelineService:
     def __init__(self):
@@ -26,6 +28,39 @@ class PipelineService:
                 db.commit()
         finally:
             db.close()
+
+    async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list):
+        if not segments:
+            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+            return
+
+        try:
+            # 2. SUMMARIZING
+            self.update_status(meeting_id, MeetingStatus.SUMMARIZING.value)
+            summary_text = await self.llm_service.summarize_meeting(segments)
+            summary_path = os.path.join(meeting_dir, "summary.md")
+            with open(summary_path, "w", encoding="utf-8") as f:
+                f.write(summary_text)
+
+            # 3. EXTRACTING ACTIONS
+            self.update_status(meeting_id, MeetingStatus.EXTRACTING_ACTIONS.value)
+            actions_json_str = await self.llm_service.extract_action_items(segments)
+            actions_path = os.path.join(meeting_dir, "actions.json")
+            with open(actions_path, "w", encoding="utf-8") as f:
+                f.write(actions_json_str)
+
+            # 4. GENERATING EMAIL
+            self.update_status(meeting_id, MeetingStatus.GENERATING_EMAIL.value)
+            email_html = await self.llm_service.generate_email(summary_text, actions_json_str)
+            email_path = os.path.join(meeting_dir, "email.html")
+            with open(email_path, "w", encoding="utf-8") as f:
+                f.write(email_html)
+
+            # 5. COMPLETED
+            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+        except Exception as e:
+            logger.error(f"Error in post-transcription for {meeting_id}: {e}", exc_info=True)
+            self.update_status(meeting_id, MeetingStatus.FAILED.value)
 
     async def process_meeting(self, meeting_id: str):
         meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
@@ -46,36 +81,10 @@ class PipelineService:
             with open(transcript_path, "w", encoding="utf-8") as f:
                 json.dump({"segments": segments}, f, indent=2)
                 
-            if not segments:
-                self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
-                return
-
-            # 2. SUMMARIZING
-            self.update_status(meeting_id, MeetingStatus.SUMMARIZING.value)
-            summary_text = await self.llm_service.summarize_meeting(segments)
-            summary_path = os.path.join(meeting_dir, "summary.md")
-            with open(summary_path, "w", encoding="utf-8") as f:
-                f.write(summary_text)
-
-            # 3. EXTRACTING ACTIONS
-            self.update_status(meeting_id, MeetingStatus.EXTRACTING_ACTIONS.value)
-            actions_json_str = await self.llm_service.extract_action_items(segments)
-            actions_path = os.path.join(meeting_dir, "actions.json")
-            with open(actions_path, "w", encoding="utf-8") as f:
-                f.write(actions_json_str)
-
-            # 4. GENERATING EMAIL
-            self.update_status(meeting_id, MeetingStatus.GENERATING_EMAIL.value)
-            email_html = await self.llm_service.generate_email(summary_text, actions_json_str)
-            email_path = os.path.join(meeting_dir, "email.html")
-            with open(email_path, "w", encoding="utf-8") as f:
-                f.write(email_html)
-
-            # 5. COMPLETED
-            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+            await self._process_post_transcription(meeting_id, meeting_dir, segments)
 
         except Exception as e:
-            print(f"Error processing meeting {meeting_id}: {e}")
+            logger.error(f"Error processing meeting {meeting_id}: {e}", exc_info=True)
             self.update_status(meeting_id, MeetingStatus.FAILED.value)
 
     async def process_transcript(self, meeting_id: str):
@@ -91,34 +100,8 @@ class PipelineService:
                 data = json.load(f)
                 segments = data.get("segments", [])
                 
-            if not segments:
-                self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
-                return
-
-            # 2. SUMMARIZING
-            self.update_status(meeting_id, MeetingStatus.SUMMARIZING.value)
-            summary_text = await self.llm_service.summarize_meeting(segments)
-            summary_path = os.path.join(meeting_dir, "summary.md")
-            with open(summary_path, "w", encoding="utf-8") as f:
-                f.write(summary_text)
-
-            # 3. EXTRACTING ACTIONS
-            self.update_status(meeting_id, MeetingStatus.EXTRACTING_ACTIONS.value)
-            actions_json_str = await self.llm_service.extract_action_items(segments)
-            actions_path = os.path.join(meeting_dir, "actions.json")
-            with open(actions_path, "w", encoding="utf-8") as f:
-                f.write(actions_json_str)
-
-            # 4. GENERATING EMAIL
-            self.update_status(meeting_id, MeetingStatus.GENERATING_EMAIL.value)
-            email_html = await self.llm_service.generate_email(summary_text, actions_json_str)
-            email_path = os.path.join(meeting_dir, "email.html")
-            with open(email_path, "w", encoding="utf-8") as f:
-                f.write(email_html)
-
-            # 5. COMPLETED
-            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+            await self._process_post_transcription(meeting_id, meeting_dir, segments)
 
         except Exception as e:
-            print(f"Error processing meeting {meeting_id}: {e}")
+            logger.error(f"Error processing transcript for {meeting_id}: {e}", exc_info=True)
             self.update_status(meeting_id, MeetingStatus.FAILED.value)

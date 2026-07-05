@@ -1,23 +1,19 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database.db import SessionLocal
 from database.models import Meeting
-from schemas.meeting import MeetingCreate, MeetingResponse
-
-router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
+from schemas.meeting import MeetingCreate, MeetingResponse, MeetingUpdate, ChatRequest
+from core.deps import get_db, validate_meeting_id
+from core.paths import MEETINGS_DIR
+from services.pipeline_service import PipelineService
+from services.llm_service import LLMService
+from schemas.status import MeetingStatus
 import os
 import json
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
+import shutil
+router = APIRouter()
+pipeline_service = PipelineService()
+llm_service = LLMService()
 
 @router.post("/meeting", response_model=MeetingResponse)
 def create_meeting(meeting: MeetingCreate, db: Session = Depends(get_db)):
@@ -46,9 +42,10 @@ def get_meetings(db: Session = Depends(get_db)):
 
 @router.get("/meeting/{meeting_id}")
 def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
-        return {"error": "Meeting not found"}
+        raise HTTPException(status_code=404, detail="Meeting not found")
         
     meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
     
@@ -74,7 +71,7 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
         with open(actions_path, "r", encoding="utf-8") as f:
             try:
                 data["actions"] = json.load(f)
-            except:
+            except (json.JSONDecodeError, ValueError):
                 data["actions"] = f.read()
 
     email_path = os.path.join(meeting_dir, "email.html")
@@ -86,19 +83,20 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
 
 @router.get("/meeting/{meeting_id}/status")
 def get_meeting_status(meeting_id: str, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
-        return {"error": "Meeting not found"}
+        raise HTTPException(status_code=404, detail="Meeting not found")
     return {"status": meeting.status, "job_id": meeting.job_id}
 
-from schemas.meeting import MeetingUpdate
-import shutil
+
 
 @router.patch("/meeting/{meeting_id}")
 def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
-        return {"error": "Meeting not found"}
+        raise HTTPException(status_code=404, detail="Meeting not found")
         
     if update_data.title:
         meeting.title = update_data.title
@@ -120,9 +118,10 @@ def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = De
 
 @router.delete("/meeting/{meeting_id}")
 def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
-        return {"error": "Meeting not found"}
+        raise HTTPException(status_code=404, detail="Meeting not found")
         
     db.delete(meeting)
     db.commit()
@@ -132,3 +131,57 @@ def delete_meeting(meeting_id: str, db: Session = Depends(get_db)):
         shutil.rmtree(meeting_dir)
         
     return {"success": True}
+
+@router.get("/meetings/insights")
+def get_meetings_insights(db: Session = Depends(get_db)):
+    meetings = db.query(Meeting).all()
+    total_meetings = len(meetings)
+    total_actions = 0
+    
+    for meeting in meetings:
+        actions_path = os.path.join(MEETINGS_DIR, meeting.id, "actions.json")
+        if os.path.exists(actions_path):
+            try:
+                with open(actions_path, "r", encoding="utf-8") as f:
+                    actions = json.load(f)
+                    if isinstance(actions, list):
+                        total_actions += len(actions)
+            except:
+                pass
+                
+    return {
+        "total_meetings": total_meetings,
+        "total_action_items": total_actions
+    }
+
+@router.post("/meeting/{meeting_id}/retry")
+def retry_meeting(meeting_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    meeting.status = MeetingStatus.TRANSCRIBING.value
+    db.commit()
+    
+    background_tasks.add_task(pipeline_service.process_meeting, meeting_id)
+    return {"status": "retrying"}
+
+@router.post("/meeting/{meeting_id}/chat")
+async def chat_with_meeting(meeting_id: str, request: ChatRequest, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+        
+    transcript_path = os.path.join(MEETINGS_DIR, meeting_id, "transcript.json")
+    if not os.path.exists(transcript_path):
+        raise HTTPException(status_code=400, detail="Transcript not found for this meeting")
+        
+    with open(transcript_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        segments = data.get("segments", [])
+        
+    messages_list = [{"role": m.role, "content": m.content} for m in request.messages]
+    response_text = await llm_service.chat_with_meeting(segments, messages_list)
+    return {"response": response_text}

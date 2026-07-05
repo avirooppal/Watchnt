@@ -88,21 +88,21 @@ export default function Popup() {
     if (!isRecording && Object.keys(pipelineState).length === 0) return null;
 
     return (
-      <div className="w-full flex flex-col gap-2 mt-4 px-4 py-3 bg-watchnt-surface border border-watchnt-border rounded-lg">
-        <div className="text-[10px] font-bold text-watchnt-text-muted uppercase tracking-wider mb-1">Current Step</div>
+      <div className="w-full flex flex-col gap-2 mt-4 px-4 py-3 bg-signal-surface border border-border-hairline rounded-lg">
+        <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider mb-1">Current Step</div>
         {steps.map(step => {
           let state = pipelineState[step.id] || (isRecording && step.id === 'recording' ? 'active' : 'pending');
           
           return (
-            <div key={step.id} className={`flex items-center gap-3 text-sm font-medium ${state === 'active' ? 'text-watchnt-text' : state === 'done' ? 'text-watchnt-success' : 'text-watchnt-text-muted/50'}`}>
+            <div key={step.id} className={`flex items-center gap-3 text-sm font-medium ${state === 'active' ? 'text-text-primary' : state === 'done' ? 'text-state-success' : 'text-text-muted/50'}`}>
               {state === 'done' ? (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
               ) : state === 'active' ? (
                 <div className="w-4 h-4 flex items-center justify-center">
-                  <div className="w-2 h-2 rounded-full bg-watchnt-accent animate-ping" />
+                  <div className="w-2 h-2 rounded-full bg-accent-amber animate-ping" />
                 </div>
               ) : state === 'error' ? (
-                 <svg className="w-4 h-4 text-watchnt-error" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                 <svg className="w-4 h-4 text-state-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
               ) : (
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="5" strokeWidth={2} /></svg>
               )}
@@ -115,20 +115,20 @@ export default function Popup() {
   };
 
   return (
-    <div className="w-[340px] bg-watchnt-bg text-watchnt-text flex flex-col font-sans select-none overflow-hidden h-[480px]">
-      <header className="px-5 py-4 border-b border-watchnt-border flex items-center justify-between bg-watchnt-bg">
+    <div className="w-[340px] bg-signal-ink text-text-primary flex flex-col font-sans select-none overflow-hidden h-[480px]">
+      <header className="px-5 py-4 border-b border-border-hairline flex items-center justify-between bg-signal-ink">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="WatchNT" className="w-5 h-5 rounded-sm object-cover" />
           <h1 className="text-sm font-bold tracking-tight">WatchNT</h1>
         </div>
         {meetingDetected ? (
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-watchnt-success">
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-state-success">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             Meet Detected
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-watchnt-text-muted">
-            <span className="w-1.5 h-1.5 rounded-full bg-watchnt-text-muted/50" />
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
+            <span className="w-1.5 h-1.5 rounded-full bg-text-muted/50" />
             No Meeting
           </div>
         )}
@@ -137,8 +137,8 @@ export default function Popup() {
       <main className="flex-1 flex flex-col items-center justify-center p-5 w-full">
         {isRecording ? (
           <div className="flex flex-col items-center w-full animate-fade-in">
-            <div className="flex items-center gap-2 mb-2 text-watchnt-error font-semibold">
-              <div className="w-2.5 h-2.5 rounded-full bg-watchnt-error shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
+            <div className="flex items-center gap-2 mb-2 text-state-danger font-semibold">
+              <div className="w-2.5 h-2.5 rounded-full bg-state-danger shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
               Recording
             </div>
             <div className="text-3xl font-mono font-medium tracking-tight mb-6">
@@ -146,30 +146,30 @@ export default function Popup() {
             </div>
             <div className="flex items-center gap-[3px] h-6 mb-2 w-full justify-center opacity-80">
               {[...Array(20)].map((_, i) => (
-                <div key={i} className="w-1 bg-watchnt-accent rounded-full animate-waveform" style={{ animationDelay: `${i * 0.05}s` }} />
+                <div key={i} className="w-1 bg-accent-amber rounded-full animate-waveform" style={{ animationDelay: `${i * 0.05}s` }} />
               ))}
             </div>
           </div>
         ) : !Object.keys(pipelineState).length ? (
           <div className="flex flex-col items-center text-center px-4 w-full h-full justify-center opacity-70">
-            <svg className="w-10 h-10 mb-4 text-watchnt-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            <svg className="w-10 h-10 mb-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             <p className="text-sm font-medium mb-1">Ready to capture.</p>
-            <p className="text-xs text-watchnt-text-muted">Join a Google Meet and press start below.</p>
+            <p className="text-xs text-text-muted">Join a Google Meet and press start below.</p>
           </div>
         ) : null}
 
         {renderPipeline()}
       </main>
       
-      <footer className="p-4 border-t border-watchnt-border flex flex-col gap-2 bg-watchnt-bg shrink-0">
+      <footer className="p-4 border-t border-border-hairline flex flex-col gap-2 bg-signal-ink shrink-0">
         {!isRecording ? (
           <button 
             onClick={handleStart}
             disabled={!meetingDetected}
-            className={`w-full py-2.5 rounded-md font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-watchnt-accent/50 ${
+            className={`w-full py-2.5 rounded-md font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent-amber/50 ${
               meetingDetected 
-                ? 'bg-watchnt-accent text-white hover:bg-watchnt-accent-light shadow-button' 
-                : 'bg-watchnt-surface text-watchnt-text-muted cursor-not-allowed border border-watchnt-border'
+                ? 'bg-accent-amber text-white hover:bg-accent-amber-dim shadow-button' 
+                : 'bg-signal-surface text-text-muted cursor-not-allowed border border-border-hairline'
             }`}
           >
             Start Recording
@@ -177,14 +177,14 @@ export default function Popup() {
         ) : (
           <button 
             onClick={handleStop}
-            className="w-full py-2.5 rounded-md font-medium text-sm bg-watchnt-surface border border-watchnt-error/30 text-watchnt-error hover:bg-watchnt-error/10 transition-all focus:outline-none focus:ring-2 focus:ring-watchnt-error/50 shadow-surface"
+            className="w-full py-2.5 rounded-md font-medium text-sm bg-signal-surface border border-state-danger/30 text-state-danger hover:bg-state-danger/10 transition-all focus:outline-none focus:ring-2 focus:ring-state-danger/50 shadow-surface"
           >
             Stop Recording
           </button>
         )}
         <button 
           onClick={handleDashboard}
-          className="w-full py-2.5 rounded-md font-medium text-sm bg-transparent hover:bg-watchnt-surface text-watchnt-text-muted hover:text-watchnt-text transition-all focus:outline-none"
+          className="w-full py-2.5 rounded-md font-medium text-sm bg-transparent hover:bg-signal-surface text-text-muted hover:text-text-primary transition-all focus:outline-none"
         >
           Open Dashboard
         </button>
