@@ -4,6 +4,11 @@ import { startObserver, stopObserver } from './observer';
 export const Bot: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
 
+  const isRecordingRef = React.useRef(isRecording);
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
+
   useEffect(() => {
     chrome.storage.local.get(['isRecording'], (result) => {
       setIsRecording(!!result.isRecording);
@@ -25,7 +30,16 @@ export const Bot: React.FC = () => {
     };
     chrome.storage.onChanged.addListener(listener);
     
-    return () => chrome.storage.onChanged.removeListener(listener);
+    return () => {
+      chrome.storage.onChanged.removeListener(listener);
+      // Auto-upload if the bot is unmounted (e.g. meeting ended) while still recording
+      if (isRecordingRef.current) {
+        console.log("WatchNT: Meeting ended or unmounted while recording. Auto-uploading...");
+        const transcriptData = stopObserver();
+        uploadTranscript(transcriptData);
+        chrome.storage.local.set({ isRecording: false, isUploading: true, pipelineStatus: 'UPLOADING' });
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -40,34 +54,8 @@ export const Bot: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isRecording]);
 
-  const uploadTranscript = async (transcript: any[]) => {
-    try {
-      const createRes = await fetch('http://localhost:8000/meeting', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Google Meet - ' + new Date().toLocaleString() })
-      });
-      if (!createRes.ok) throw new Error('Failed to create meeting');
-      
-      const meetingData = await createRes.json();
-      const meetingId = meetingData.id;
-
-      const formData = new FormData();
-      formData.append('meeting_id', meetingId);
-      formData.append('transcript_json', JSON.stringify(transcript));
-      
-      const res = await fetch('http://localhost:8000/upload_transcript', {
-        method: 'POST',
-        body: formData
-      });
-      if (!res.ok) throw new Error('Failed to upload transcript');
-      
-      const data = await res.json();
-      chrome.runtime.sendMessage({ type: 'RECORDING_UPLOADED', payload: { meetingId: data.meeting_id } });
-    } catch (e) {
-      console.error("Failed to upload transcript:", e);
-      chrome.runtime.sendMessage({ type: 'RECORDING_UPLOAD_FAILED' });
-    }
+  const uploadTranscript = (transcript: any[]) => {
+    chrome.runtime.sendMessage({ type: 'PROCESS_TRANSCRIPT', payload: { transcript } });
   };
 
 

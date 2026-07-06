@@ -60,12 +60,12 @@ export default function Popup() {
         const newState: Record<string, 'pending' | 'active' | 'done' | 'error'> = {};
         if (status === 'RECORDING') { newState.recording = 'active'; }
         if (status === 'UPLOADING') { newState.recording = 'done'; newState.uploading = 'active'; }
-        if (status === 'TRANSCRIBING') { newState.uploading = 'done'; newState.transcribing = 'active'; }
-        if (status === 'SUMMARIZING') { newState.transcribing = 'done'; newState.summarizing = 'active'; }
-        if (status === 'EXTRACTING_ACTIONS') { newState.summarizing = 'done'; newState.actions = 'active'; }
-        if (status === 'GENERATING_EMAIL') { newState.actions = 'done'; newState.email = 'active'; }
-        if (status === 'COMPLETED') { newState.email = 'done'; }
-        if (status === 'FAILED') { newState.email = 'error'; }
+        if (status === 'TRANSCRIBING') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'active'; }
+        if (status === 'SUMMARIZING') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'active'; }
+        if (status === 'EXTRACTING_ACTIONS') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'active'; }
+        if (status === 'GENERATING_EMAIL') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'active'; }
+        if (status === 'COMPLETED') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'done'; }
+        if (status === 'FAILED') { newState.recording = 'done'; newState.uploading = 'done'; newState.transcribing = 'done'; newState.summarizing = 'done'; newState.actions = 'done'; newState.email = 'error'; }
         setPipelineState(newState);
       }
     };
