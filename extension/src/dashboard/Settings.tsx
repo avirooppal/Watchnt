@@ -85,6 +85,18 @@ export default function Settings() {
     setTesting(true);
     setTestResults(null);
     try {
+      const payload: Record<string, string> = {};
+      const keyFields = ["openai_api_key", "groq_api_key", "gemini_api_key", "openrouter_api_key"];
+      for (const [key, value] of Object.entries(config)) {
+        if (keyFields.includes(key) && typeof value === "string" && value.includes("****")) continue;
+        payload[key] = value;
+      }
+      await fetch(`${backendApiUrl}/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
       const res = await fetch(`${backendApiUrl}/config/test`, { method: 'POST' });
       const data = await res.json();
       setTestResults(data);
@@ -117,7 +129,8 @@ export default function Settings() {
       
       {/* Sidebar Navigation */}
       <aside className="w-64 border-r border-border-strong shrink-0 py-12 px-6 flex flex-col gap-3">
-        <h2 className="text-3xl font-display tracking-tight mb-6 px-4">Settings</h2>
+        <h2 className="text-3xl font-display tracking-tight mb-2 px-4">Settings</h2>
+        <p className="text-xs text-text-muted px-4 mb-4">Open Source Intelligence Engine</p>
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -170,8 +183,8 @@ export default function Settings() {
              <div className="space-y-10 animate-fade-in">
                 <section className="space-y-4">
                   <div>
-                    <h4 className="text-lg font-semibold">LLM Generation</h4>
-                    <p className="text-sm text-text-muted">Used for summaries and action items extraction.</p>
+                    <h4 className="text-lg font-semibold">Intelligence Engine (LLM)</h4>
+                    <p className="text-sm text-text-muted">BYOK (Bring Your Own Keys). Cloud is optional, local is prioritized.</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5 relative z-50">

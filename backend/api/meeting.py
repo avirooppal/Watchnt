@@ -51,34 +51,18 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
     
     data = {}
     
-    metadata_path = os.path.join(meeting_dir, "metadata.json")
-    if os.path.exists(metadata_path):
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            data["metadata"] = json.load(f)
-            data["metadata"]["status"] = meeting.status
-            
-    summary_path = os.path.join(meeting_dir, "summary.md")
-    if os.path.exists(summary_path):
-        with open(summary_path, "r", encoding="utf-8") as f:
-            data["summary"] = f.read()
+    meeting_json_path = os.path.join(meeting_dir, "meeting.json")
+    if os.path.exists(meeting_json_path):
+        with open(meeting_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "meeting" not in data:
+                data["meeting"] = {}
+            data["meeting"]["status"] = meeting.status
             
     transcript_path = os.path.join(meeting_dir, "transcript.json")
     if os.path.exists(transcript_path):
         with open(transcript_path, "r", encoding="utf-8") as f:
             data["transcript"] = json.load(f)
-            
-    actions_path = os.path.join(meeting_dir, "actions.json")
-    if os.path.exists(actions_path):
-        with open(actions_path, "r", encoding="utf-8") as f:
-            try:
-                data["actions"] = json.load(f)
-            except (json.JSONDecodeError, ValueError):
-                data["actions"] = f.read()
-
-    email_path = os.path.join(meeting_dir, "email.html")
-    if os.path.exists(email_path):
-        with open(email_path, "r", encoding="utf-8") as f:
-            data["email"] = f.read()
                 
     return data
 
@@ -107,15 +91,16 @@ def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = De
     db.commit()
     db.refresh(meeting)
     
-    # Update title in metadata.json if it exists
+    # Update title in meeting.json if it exists
     meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
-    metadata_path = os.path.join(meeting_dir, "metadata.json")
-    if os.path.exists(metadata_path):
-        with open(metadata_path, "r", encoding="utf-8") as f:
-            meta = json.load(f)
-        meta["title"] = meeting.title
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
+    meeting_json_path = os.path.join(meeting_dir, "meeting.json")
+    if os.path.exists(meeting_json_path):
+        with open(meeting_json_path, "r", encoding="utf-8") as f:
+            meeting_model = json.load(f)
+        if "meeting" in meeting_model:
+            meeting_model["meeting"]["title"] = meeting.title
+        with open(meeting_json_path, "w", encoding="utf-8") as f:
+            json.dump(meeting_model, f, indent=2)
             
     return meeting
 
@@ -142,13 +127,12 @@ def get_meetings_insights(db: Session = Depends(get_db)):
     total_actions = 0
     
     for meeting in meetings:
-        actions_path = os.path.join(MEETINGS_DIR, meeting.id, "actions.json")
-        if os.path.exists(actions_path):
+        meeting_json_path = os.path.join(MEETINGS_DIR, meeting.id, "meeting.json")
+        if os.path.exists(meeting_json_path):
             try:
-                with open(actions_path, "r", encoding="utf-8") as f:
-                    actions = json.load(f)
-                    if isinstance(actions, list):
-                        total_actions += len(actions)
+                with open(meeting_json_path, "r", encoding="utf-8") as f:
+                    meeting_model = json.load(f)
+                    total_actions += meeting_model.get("analytics", {}).get("action_items", 0)
             except:
                 pass
                 

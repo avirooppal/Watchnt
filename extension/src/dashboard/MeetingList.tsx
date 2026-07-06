@@ -361,6 +361,16 @@ export default function MeetingList() {
                           {folders.find(f => f.id === meeting.folder_id)?.name || 'Unknown'}
                         </div>
                       )}
+                      {meeting.duration_minutes && (
+                        <div className="mt-2 ml-2 inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest uppercase text-text-muted bg-signal-ink px-2 py-1 border border-border-hairline">
+                          {meeting.duration_minutes} min
+                        </div>
+                      )}
+                      {meeting.provider && (
+                        <div className="mt-2 ml-2 inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest uppercase text-text-muted bg-signal-ink px-2 py-1 border border-border-hairline">
+                          {meeting.provider}
+                        </div>
+                      )}
                     </Link>
                   )}
                   

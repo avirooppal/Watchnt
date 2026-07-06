@@ -12,6 +12,14 @@ class Meeting(Base):
     job_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.timezone.utc))
     folder_id = Column(String, nullable=True)
+    duration_minutes = Column(String, nullable=True)
+    language = Column(String, nullable=True)
+    provider = Column(String, nullable=True)
+    model_used = Column(String, nullable=True)
+    model_version = Column(String, nullable=True)
+    processing_time = Column(String, nullable=True)
+    word_count = Column(String, nullable=True)
+    speaker_count = Column(String, nullable=True)
 
 class Folder(Base):
     __tablename__ = "folders"

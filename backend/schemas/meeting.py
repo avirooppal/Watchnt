@@ -12,6 +12,14 @@ class MeetingResponse(BaseModel):
     job_id: Optional[str] = None
     created_at: datetime
     folder_id: Optional[str] = None
+    duration_minutes: Optional[str] = None
+    language: Optional[str] = None
+    provider: Optional[str] = None
+    model_used: Optional[str] = None
+    model_version: Optional[str] = None
+    processing_time: Optional[str] = None
+    word_count: Optional[str] = None
+    speaker_count: Optional[str] = None
 
     class Config:
         from_attributes = True

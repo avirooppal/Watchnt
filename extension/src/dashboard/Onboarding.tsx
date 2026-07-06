@@ -30,6 +30,18 @@ export default function Onboarding() {
   const handleTest = async () => {
     setTesting(true);
     try {
+      const payload: Record<string, string> = {};
+      const keyFields = ["openai_api_key", "groq_api_key", "gemini_api_key", "openrouter_api_key"];
+      for (const [key, value] of Object.entries(config)) {
+        if (keyFields.includes(key) && typeof value === "string" && value.includes("****")) continue;
+        payload[key] = value;
+      }
+      await fetch('http://localhost:8000/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
       const res = await fetch('http://localhost:8000/config/test', { method: 'POST' });
       if (res.ok) {
         showToast('Connection test passed!', 'success');
@@ -97,7 +109,7 @@ export default function Onboarding() {
               <img src="/logo.png" alt="WatchNT Logo" className="w-full h-full rounded-none object-cover shadow-surface grayscale" />
             </div>
             <h1 className="text-4xl font-display tracking-tight text-text-primary">Welcome to WatchNT</h1>
-            <p className="text-text-muted">The private, open-source AI meeting copilot.</p>
+            <p className="text-text-muted mt-2 max-w-md mx-auto">The private, open-source Meeting Intelligence Engine. Bring Your Own Keys (BYOK). 100% Local-First by design.</p>
             <div className="pt-8 space-y-3">
               <Button onClick={nextStep} className="w-full" size="lg">Get Started</Button>
               <button onClick={() => {
@@ -112,8 +124,8 @@ export default function Onboarding() {
         {step === 2 && (
           <div className="space-y-8 text-center animate-slide-in-right">
             <h2 className="text-3xl font-display tracking-tight text-text-primary">What is WatchNT?</h2>
-            <p className="text-text-muted leading-relaxed">
-              WatchNT runs silently in the background during your Google Meets. It reads the live captions directly from your browser—no bots joining the call.
+            <p className="text-text-muted leading-relaxed max-w-lg mx-auto">
+              WatchNT is a Meeting Intelligence Engine that runs securely on your hardware. It reads live captions directly from your browser—no bots joining the call, no vendor lock-in, and your data stays yours.
             </p>
             <div className="pt-8 flex gap-4">
               <Button variant="ghost" onClick={prevStep} className="w-1/3">Back</Button>
