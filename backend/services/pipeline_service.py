@@ -20,25 +20,35 @@ class PipelineService:
         self.llm_service = LLMService()
 
     def update_status(self, meeting_id: str, status: str):
-        db = SessionLocal()
-        try:
-            meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-            if meeting:
-                meeting.status = status
-                db.commit()
-        finally:
-            db.close()
+        for attempt in range(5):
+            db = SessionLocal()
+            try:
+                meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+                if meeting:
+                    meeting.status = status
+                    db.commit()
+                break
+            except Exception as e:
+                logger.warning(f"Database locked or error in update_status, retrying {attempt+1}/5: {e}")
+                time.sleep(1)
+            finally:
+                db.close()
             
     def update_meeting_metadata(self, meeting_id: str, **kwargs):
-        db = SessionLocal()
-        try:
-            meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-            if meeting:
-                for key, value in kwargs.items():
-                    setattr(meeting, key, value)
-                db.commit()
-        finally:
-            db.close()
+        for attempt in range(5):
+            db = SessionLocal()
+            try:
+                meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+                if meeting:
+                    for key, value in kwargs.items():
+                        setattr(meeting, key, value)
+                    db.commit()
+                break
+            except Exception as e:
+                logger.warning(f"Database locked or error in update_meeting_metadata, retrying {attempt+1}/5: {e}")
+                time.sleep(1)
+            finally:
+                db.close()
 
     def _calculate_analytics(self, segments: list) -> dict:
         word_count = sum(len(seg.get('text', '').split()) for seg in segments)

@@ -89,7 +89,10 @@ class LLMService:
                     # For List[Schema]
                     # This is a bit of a hack for typing.List validation, assuming it's a Pydantic model inside.
                     item_type = prompt_def.expected_schema.__args__[0]
-                    validated_data = [item_type(**item).model_dump() for item in parsed_data]
+                    if hasattr(item_type, "model_validate"):
+                        validated_data = [item_type(**item).model_dump() for item in parsed_data]
+                    else:
+                        validated_data = [item_type(item) for item in parsed_data]
                 else:
                     # For Schema directly
                     validated_data = prompt_def.expected_schema(**parsed_data).model_dump()
