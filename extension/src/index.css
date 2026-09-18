@@ -1,85 +1,51 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
 @theme {
-  /* Core Colors */
-  --color-signal-ink: #07090B;      /* Even darker, almost pure black for deep contrast */
-  --color-signal-surface: #0E1216;  /* Extremely subtle surface */
-  --color-signal-surface-raised: #151A20; 
+  /* High-Contrast Obsidian & Notion Dark Palette */
+  --color-signal-ink: #101012;               /* Deep Obsidian graphite canvas */
+  --color-signal-surface: #18181c;           /* Distinct card & panel surface */
+  --color-signal-surface-raised: #222228;    /* Elevated card & callout surface */
+  --color-signal-surface-elevated: #2c2c34;  /* Popovers, menus & active item highlight */
   
-  /* Semantic Accents */
-  --color-accent-amber: #F5A623;    /* Refined Amber. ONLY used for brand, primary CTA, and focus */
-  --color-accent-amber-dim: #C88316;
+  /* Vibrant Obsidian Iris Accent - Pops on dark surfaces */
+  --color-accent-amber: #8b5cf6;             /* Vibrant Obsidian amethyst violet */
+  --color-accent-amber-dim: #7c3aed;         /* Deep pressed violet */
+  --color-accent-amber-glow: rgba(139, 92, 246, 0.25);
   
-  /* State Colors */
-  --color-state-success: #34D399;   /* Green for success */
-  --color-state-info: #38BDF8;      /* Cyan/Blue for info */
-  --color-state-warning: #FBBF24;   /* Gold for warning */
-  --color-state-danger: #EF4444;    /* Red for recording / error */
-  --color-state-neutral: #9CA3AF;   /* Gray for neutral */
+  /* Crisp Status Colors */
+  --color-state-success: #10b981;            /* Vivid emerald green */
+  --color-state-info: #38bdf8;               /* Crisp sky blue */
+  --color-state-warning: #f59e0b;            /* Vivid warm amber */
+  --color-state-danger: #ef4444;             /* Punchy recording / error crimson */
+  --color-state-neutral: #9ca3af;            /* Clean neutral gray */
   
-  /* Typography Colors */
-  --color-text-primary: #F3F4F6;    /* Crisp off-white */
-  --color-text-secondary: #D1D5DB;  /* Softer text */
-  --color-text-muted: #6B7280;      /* Editorial muted gray */
+  /* High-Readability Typography Colors */
+  --color-text-primary: #ffffff;             /* Pure crisp white for immediate readability */
+  --color-text-secondary: #d1d5db;           /* High contrast body text */
+  --color-text-muted: #9ca3af;               /* Clearly legible captions & metadata */
   
-  /* Borders */
-  --color-border-hairline: rgba(255, 255, 255, 0.04);
-  --color-border-strong: rgba(255, 255, 255, 0.1);
-  --color-border-focus: rgba(245, 166, 35, 0.5); /* Amber focus */
+  /* Clear, Distinct Borders */
+  --color-border-hairline: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
+  --color-border-focus: #8b5cf6;
 
   /* Typography System */
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-display: "Playfair Display", "Fraunces", "Georgia", serif;
-  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
 
-  /* Premium Layered Shadows */
-  --shadow-glow: 0 0 32px rgba(245, 166, 35, 0.15);
-  --shadow-button: 0 4px 14px rgba(245, 166, 35, 0.25);
+  /* Clean subtle elevation */
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-floating: 0 10px 30px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
   
-  /* Editorial / Brutalist Surface Elevation */
-  --shadow-surface: 
-    0 1px 2px rgba(0, 0, 0, 0.4), 
-    0 4px 12px rgba(0, 0, 0, 0.5), 
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* Subtle animations */
+  --animate-fade-in: fadeIn 0.15s ease-out forwards;
+}
 
-  --shadow-floating: 
-    0 8px 32px rgba(0, 0, 0, 0.8), 
-    0 2px 8px rgba(0, 0, 0, 0.6), 
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-
-  /* Animation Timings - Elegant, no bounce */
-  --animate-waveform: waveform 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  --animate-shimmer: shimmer 2.5s linear infinite;
-  --animate-fade-in: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-fade-up: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-signal-ripple: signalRipple 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  
-  @keyframes fadeUp {
-    0% { transform: translateY(8px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-  @keyframes slideUp {
-    0% { transform: translateY(16px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-  @keyframes waveform {
-    0%, 100% { height: 4px; }
-    50% { height: 100%; }
-  }
-  @keyframes shimmer {
-    0% { background-position: -1000px 0; }
-    100% { background-position: 1000px 0; }
-  }
-  @keyframes signalRipple {
-    0%, 100% { height: 2px; opacity: 0.3; }
-    50% { height: 16px; opacity: 1; }
-  }
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 :root {
@@ -89,14 +55,36 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0B0F14;
-  color: #ECEEF0;
-  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  background-color: #101012;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar for Signal System */
+/* Notion Callout Box */
+.notion-callout {
+  background-color: #18181c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid #8b5cf6;
+  border-radius: 8px;
+}
+
+/* Clean glass panel */
+.glass-panel {
+  background: #18181c;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-panel-elevated {
+  background: #222228;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Custom Minimal Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -105,9 +93,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(236, 238, 240, 0.07);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(236, 238, 240, 0.15);
+  background: rgba(255, 255, 255, 0.3);
 }

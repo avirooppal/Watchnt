@@ -101,7 +101,7 @@ async function uploadAudio(blob) {
     formData.append('meeting_id', meeting.id);
     formData.append('file', blob, 'audio.webm');
     
-    const uploadRes = await fetch('http://localhost:8000/upload', {
+    await fetch('http://localhost:8000/upload', {
       method: 'POST',
       body: formData
     });

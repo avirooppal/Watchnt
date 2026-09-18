@@ -32,13 +32,12 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
   }, []);
 
   return (
-    <div className={`relative z-50 ${className}`} ref={containerRef} style={{ position: 'relative', zIndex: 9999 }}>
+    <div className={`relative ${className}`} ref={containerRef}>
       <button
         type="button"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        className="w-full h-11 px-4 bg-signal-surface border-b border-l-0 border-r-0 border-t-0 border-border-strong rounded-none text-sm font-sans text-text-primary focus:outline-none focus:border-accent-amber flex items-center justify-between transition-colors hover:border-white/20"
-        style={{ backgroundColor: '#0E1216' }}
+        className="w-full h-9 px-3 bg-signal-surface border border-border-hairline rounded-lg text-sm font-sans text-text-primary focus:outline-none focus:border-accent-amber flex items-center justify-between transition-colors hover:border-border-strong"
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -58,7 +57,7 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
       >
         <span className="truncate">{selectedOption?.label}</span>
         <svg 
-          className={`w-4 h-4 text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-4 h-4 text-text-muted transition-transform duration-200 shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`} 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"
@@ -68,18 +67,18 @@ export const Select: React.FC<SelectProps> = ({ value, onChange, options, classN
       </button>
 
       {isOpen && (
-        <div role="listbox" className="absolute z-50 w-full mt-1 bg-signal-surface border border-border-strong rounded-none shadow-floating overflow-hidden animate-fade-in origin-top" style={{ backgroundColor: '#0E1216', zIndex: 99999 }}>
-          <div className="max-h-60 overflow-y-auto">
+        <div role="listbox" className="absolute z-50 w-full mt-1.5 bg-signal-surface-raised border border-border-hairline rounded-lg shadow-floating overflow-hidden animate-fade-in origin-top p-1" style={{ zIndex: 99999 }}>
+          <div className="max-h-60 overflow-y-auto space-y-0.5">
             {options.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 role="option"
                 aria-selected={option.value === value}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-signal-surface-raised hover:text-white ${
+                className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors hover:bg-signal-surface-elevated hover:text-white ${
                   option.value === value 
-                    ? 'bg-signal-surface-raised text-accent-amber font-medium' 
-                    : 'text-text-primary'
+                    ? 'bg-accent-amber/15 text-accent-amber font-semibold' 
+                    : 'text-text-secondary'
                 }`}
                 onClick={() => {
                   onChange(option.value);
