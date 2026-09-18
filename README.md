@@ -34,14 +34,7 @@
 ## Visual Tour
 
 <div align="center">
-  <img src="dashboard.png" alt="WatchNT Meeting Intelligence Dashboard" width="85%" />
-  <p><em>WatchNT Meeting Intelligence Dashboard — Key decisions, task matrices, timelines, and entity extraction</em></p>
-</div>
-
-<br />
-
-<div align="center">
-  <img src="extension-pic.png" alt="WatchNT Extension and Floating Bot" width="70%" />
+  <img src="extension-pic.png" alt="WatchNT Extension and Floating Bot" width="75%" />
   <p><em>In-call floating recording controller with real-time status telemetry</em></p>
 </div>
 
