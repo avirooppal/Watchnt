@@ -1,16 +1,16 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Literal
 
 # Define expected output schemas
 
 class ActionItemSchema(BaseModel):
-    task: str = Field(..., description="Actionable work to be done")
+    task: str = Field(..., min_length=1, description="Actionable work to be done")
     owner: Optional[str] = Field(None, description="Person responsible")
     deadline: Optional[str] = Field(None, description="When it is due")
-    priority: str = Field(..., description="High, Medium, or Low")
+    priority: Literal["High", "Medium", "Low"] = Field(..., description="High, Medium, or Low")
     status: str = Field("Pending Review", description="Must be 'Pending Review'")
     evidence: Optional[str] = Field(None, description="Transcript reference or quote")
-    confidence: str = Field(..., description="High, Medium, or Low based on certainty")
+    confidence: Literal["High", "Medium", "Low"] = Field(..., description="High, Medium, or Low based on certainty")
     suggested_tags: List[str] = Field(default_factory=list)
 
 class DecisionSchema(BaseModel):
@@ -18,7 +18,7 @@ class DecisionSchema(BaseModel):
     reason: Optional[str] = Field(None, description="Why this was decided")
     participants: List[str] = Field(default_factory=list, description="People involved in the decision")
     evidence: Optional[str] = Field(None, description="Transcript reference or quote")
-    confidence: str = Field(..., description="High, Medium, or Low")
+    confidence: Literal["High", "Medium", "Low"] = Field(..., description="High, Medium, or Low")
     status: str = Field("Confirmed", description="Status of the decision")
 
 class SummarySectionSchema(BaseModel):

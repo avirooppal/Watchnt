@@ -1,21 +1,51 @@
-import React, { type InputHTMLAttributes } from 'react';
-
+import { useId, type InputHTMLAttributes } from "react";
+import { Icon, type IconName } from "./Icon";
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  hint?: string;
+  icon?: IconName;
 }
-
-export const Input: React.FC<InputProps> = ({ label, error, className = '', ...props }) => {
+export function Input({
+  label,
+  error,
+  hint,
+  icon,
+  className = "",
+  id: provided,
+  ...props
+}: InputProps) {
+  const generated = useId(),
+    id = provided || generated,
+    description = error || hint;
   return (
-    <div className="flex flex-col gap-2 w-full">
-      {label && <label className="text-[11px] font-mono tracking-widest uppercase text-text-muted">{label}</label>}
-      <input 
-        className={`w-full px-3.5 py-2 bg-signal-surface border border-border-hairline rounded-lg text-sm font-sans text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-amber transition-colors ${
-          error ? 'border-state-danger' : 'hover:border-border-strong'
-        } ${className}`}
-        {...props}
-      />
-      {error && <span className="text-xs text-state-danger">{error}</span>}
+    <div className="field">
+      {label && <label htmlFor={id}>{label}</label>}
+      <div className={`input-wrap ${icon ? "with-icon" : ""}`}>
+        {icon && <Icon name={icon} size={18} />}
+        <input
+          {...props}
+          id={id}
+          className={`input ${className}`}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={
+            [
+              props["aria-describedby"],
+              description ? `${id}-description` : undefined,
+            ]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+        />
+      </div>
+      {description && (
+        <span
+          id={`${id}-description`}
+          className={error ? "field-error" : "field-hint"}
+        >
+          {description}
+        </span>
+      )}
     </div>
   );
-};
+}

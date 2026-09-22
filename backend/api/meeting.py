@@ -7,6 +7,7 @@ from core.deps import get_db, validate_meeting_id
 from core.paths import MEETINGS_DIR
 from services.pipeline_service import PipelineService
 from services.llm_service import LLMService
+from services.action_review import apply_reviews
 from schemas.status import MeetingStatus
 import os
 import json
@@ -49,7 +50,7 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
         
     meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
     
-    data = {}
+    data = {"meeting": {"id": meeting.id, "title": meeting.title, "status": meeting.status, "created_at": meeting.created_at.isoformat()}}
     
     meeting_json_path = os.path.join(meeting_dir, "meeting.json")
     if os.path.exists(meeting_json_path):
@@ -57,13 +58,16 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
             data = json.load(f)
             if "meeting" not in data:
                 data["meeting"] = {}
-            data["meeting"]["status"] = meeting.status
+            data["meeting"].update({"id": meeting.id, "title": meeting.title, "status": meeting.status})
             
     transcript_path = os.path.join(meeting_dir, "transcript.json")
     if os.path.exists(transcript_path):
         with open(transcript_path, "r", encoding="utf-8") as f:
             data["transcript"] = json.load(f)
                 
+    actions = data.get("ai", {}).get("actions", {})
+    if isinstance(actions.get("data"), list):
+        actions["data"] = apply_reviews(meeting_id, actions["data"])
     return data
 
 @router.get("/meeting/{meeting_id}/status")
@@ -72,7 +76,13 @@ def get_meeting_status(meeting_id: str, db: Session = Depends(get_db)):
     meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
-    return {"status": meeting.status, "job_id": meeting.job_id}
+    error = None
+    path = os.path.join(MEETINGS_DIR, meeting_id, "meeting.json")
+    if meeting.status == "FAILED" and os.path.exists(path):
+        with open(path, encoding="utf-8") as source:
+            saved = json.load(source)
+        error = saved.get("capture_error") or next((stage.get("error") for stage in saved.get("ai", {}).values() if stage.get("error")), None)
+    return {"status": meeting.status, "job_id": meeting.job_id, "error": error}
 
 
 
@@ -85,7 +95,7 @@ def update_meeting(meeting_id: str, update_data: MeetingUpdate, db: Session = De
         
     if update_data.title is not None:
         meeting.title = update_data.title
-    if update_data.folder_id is not None:
+    if "folder_id" in update_data.model_fields_set:
         meeting.folder_id = update_data.folder_id
         
     db.commit()
@@ -148,10 +158,13 @@ def retry_meeting(meeting_id: str, background_tasks: BackgroundTasks, db: Sessio
     if not meeting:
         raise HTTPException(status_code=404, detail="Meeting not found")
         
+    if meeting.status not in {MeetingStatus.COMPLETED.value, MeetingStatus.FAILED.value}:
+        raise HTTPException(409, "Meeting is already processing")
     meeting.status = MeetingStatus.TRANSCRIBING.value
     db.commit()
     
-    background_tasks.add_task(pipeline_service.process_meeting, meeting_id)
+    has_transcript = os.path.exists(os.path.join(MEETINGS_DIR, meeting_id, "transcript.json"))
+    background_tasks.add_task(pipeline_service.process_transcript if has_transcript else pipeline_service.process_meeting, meeting_id)
     return {"status": "retrying"}
 
 @router.post("/meeting/{meeting_id}/chat")

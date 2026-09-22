@@ -1,227 +1,97 @@
-<div align="center">
-  <img src="logo.png" alt="WatchNT Logo" width="140" height="140" />
-  <h1>WatchNT</h1>
-  <p><strong>Local-First, Zero-Subscription AI Meeting Copilot & Intelligence Engine</strong></p>
-  <p>Record, transcribe, analyze, and extract action items from Google Meet, Zoom, and Microsoft Teams without sending audio or transcripts to third-party SaaS vendors.</p>
+# WatchNT
 
-  <p>
-    <a href="https://github.com/avirooppal/Watchnt/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.0.0-blue.svg?style=flat-square" /></a>
-    <a href="https://github.com/avirooppal/Watchnt/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" /></a>
-    <a href="https://github.com/avirooppal/Watchnt/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/avirooppal/Watchnt?style=flat-square" /></a>
-    <a href="https://github.com/avirooppal/Watchnt/issues"><img alt="Issues" src="https://img.shields.io/github/issues/avirooppal/Watchnt?style=flat-square" /></a>
-    <a href="https://github.com/avirooppal/Watchnt/network/members"><img alt="Forks" src="https://img.shields.io/github/forks/avirooppal/Watchnt?style=flat-square" /></a>
-  </p>
+A local-first meeting copilot: a Chromium extension, a FastAPI engine, SQLite, and local multilingual Whisper. No required subscription. Ollama keeps text processing local; Groq, OpenAI, Gemini, and OpenRouter remain optional BYOK text providers.
 
-  [![WatchNT AI Meeting Copilot Demo](https://markdown-videos-api.jorgenkh.no/youtube/gLmGs812cEA)](https://www.youtube.com/watch?v=gLmGs812cEA&autoplay=1)
-</div>
+## What works
 
----
+- Live tab audio with optional microphone capture, 8-second PCM windows, local Silero VAD, CPU int8 Whisper, and a live transcript preview.
+- A separate captions mode for Meet, Zoom Web, and Teams Web. Enable the platform's captions first; DOM compatibility needs testing against your platform version.
+- Local meeting library, folder filtering, transcript search, structured summaries, decisions, entities, timelines, email drafts, and meeting questions.
+- Persistent action completion, including across regenerated AI output when task and owner match.
+- English and Spanish UI with independent spoken-language selection. Auto STT detects language per window; manual override supports Whisper language codes.
+- Explicit cloud-text consent. Audio has no cloud provider path. Email drafts can be exported; SMTP sending is disabled.
 
-## Overview
+## Start locally
 
-**WatchNT** is an open-source, privacy-first meeting assistant engineered to eliminate recurring SaaS transcription costs. Combining a Chromium browser extension with a containerized FastAPI backend, WatchNT captures system audio and live captions during active calls, runs local or custom-provider speech-to-text, and executes a structured intelligence pipeline to generate executive summaries, task matrices, decisions, and follow-up emails.
+Use Python 3.10+ and Node compatible with Vite 8 (Node 22.12+ recommended).
 
-### Key Highlights
-
-- **Privacy-Preserving & Local Storage**: Raw audio, transcripts, and metadata reside locally on your machine in SQLite and disk storage.
-- **True BYOK (Bring Your Own Keys)**: Native support for zero-cost local LLMs (**Ollama**) or direct API integration with **Groq**, **OpenAI**, **Google Gemini**, and **OpenRouter**.
-- **Universal Web Platform Support**: Compatible with Google Meet, Zoom Web, and Microsoft Teams Web via Manifest V3 browser capture.
-- **Resilient AI Pipeline**: Multi-stage parallel prompt registry enforcing strict Pydantic JSON schemas with automated backoff retries.
-- **Export Ready**: Instant generation of Markdown summaries and structured CSV action items.
-
----
-
-## Visual Tour
-
-<div align="center">
-  <img src="extension-pic.png" alt="WatchNT Extension and Floating Bot" width="75%" />
-  <p><em>In-call floating recording controller with real-time status telemetry</em></p>
-</div>
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph Browser ["Chromium Browser (Extension)"]
-        Tab["Meeting Tab\n(Meet / Zoom / Teams)"] -->|Audio & Captions| Bot["Content Bot & Offscreen API"]
-        Bot -->|Upload Audio + Transcript| SW["Background Service Worker"]
-        Dashboard["React Dashboard\n(Vite + Tailwind)"] <-->|REST API| SW
-    end
-
-    subgraph Backend ["FastAPI Core (Docker / Local)"]
-        API["FastAPI Endpoints"] --> Engine["Pipeline Engine"]
-        Engine --> STT["Faster-Whisper (Local STT)"]
-        Engine --> LLM["LLM Provider Service\n(Ollama / Groq / Gemini / OpenAI / OpenRouter)"]
-        Engine --> DB[("SQLite Database & File System")]
-    end
-
-    SW -->|HTTP Requests| API
-```
-
-### Pipeline Workflow
-
-1. **Capture**: The browser extension offscreen document taps active tab audio and captures live caption streams.
-2. **Transfer**: The background service worker packages audio and transcript payloads to the FastAPI backend.
-3. **Speech-to-Text**: High-speed, local transcription using `faster-whisper`.
-4. **Intelligence Extraction**: The engine runs parallel prompt passes with schema validation:
-   - Executive Brief & Meeting Snapshot
-   - Discussion Summary & Key Decisions
-   - Action Items Matrix (assignee, priority, due date, confidence, evidence quote)
-   - Topic Milestones & Timestamped Timeline
-   - Entity Recognition (people, products, technologies, dates)
-   - Follow-up Email Draft
-5. **Review & Export**: Interactive review via the extension dashboard with one-click Markdown and CSV exports.
-
----
-
-## Tech Stack
-
-| Layer | Technologies |
-|---|---|
-| **Extension & UI** | React 19, TypeScript, Vite, TailwindCSS v4, CRXJS (Manifest V3) |
-| **Backend API** | Python 3.10, FastAPI, Uvicorn, Pydantic v2, SQLAlchemy |
-| **Speech-to-Text** | Faster-Whisper, FFmpeg |
-| **AI / LLM Runtime** | Ollama (Local), Groq, OpenAI, Google Gemini, OpenRouter |
-| **Database & Storage** | SQLite, Local Filesystem Volumes |
-| **Containerization** | Docker, Docker Compose |
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/)
-- [Node.js](https://nodejs.org/) (v18 or newer) & `npm`
-- *(Optional for fully local inference)*: [Ollama](https://ollama.com/) running on host (e.g. `ollama run llama3.2`)
-
----
-
-### Step 1: Start the Backend Service
-
-#### Option A: Docker Compose (Recommended)
-
-Clone the repository and run the containerized backend:
-
-```bash
-git clone https://github.com/avirooppal/Watchnt.git
-cd Watchnt
-
-# Build and start services in detached mode
-docker compose up --build -d
-```
-
-The backend will be available at `http://localhost:8000`. Test the health check endpoint:
-
-```bash
-curl http://localhost:8000/api/health
-```
-
-#### Option B: Manual Local Setup (Without Docker)
-
-Ensure `ffmpeg` is installed on your system PATH, then:
-
-```bash
+```powershell
 cd backend
-python -m venv venv
-
-# Windows
-.\venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
----
+Install the multilingual base model explicitly once, approximately 150 MB. This downloads model weights, never uploads audio:
 
-### Step 2: Build and Install the Browser Extension
+```powershell
+python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
+python -m uvicorn main:app --host 127.0.0.1 --port 8000 --ws-max-size 1536000
+```
 
-1. Navigate to the extension directory and install dependencies:
+Normal transcription uses cached files only. Missing weights or tokenizer files produce an actionable error instead of downloading automatically. Live PCM does not require a separate FFmpeg executable; file decoding uses PyAV.
 
-```bash
+In a second terminal, from the repository root:
+
+```powershell
 cd extension
-npm install
+npm ci
 npm run build
 ```
 
-2. Load into your Chromium browser (Chrome, Brave, Edge):
-   - Open your browser and navigate to `chrome://extensions/`.
-   - Toggle **Developer mode** in the top-right corner.
-   - Click **Load unpacked**.
-   - Select the `Watchnt/extension/dist` folder.
-   - Pin the **WatchNT** icon to your browser extension bar.
+In Chromium 116+, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `extension/dist`. Rebuild and reload the extension after source changes.
 
----
+Open WatchNT Settings:
 
-### Step 3: Configure LLM Provider (BYOK)
+1. Choose the spoken language or automatic detection, and English or Spanish for the UI.
+2. Use the optional microphone permission button if you want your own voice included. Without microphone permission, capture includes only the meeting tab.
+3. For Ollama, install/run Ollama and choose an already installed model. Use `http://localhost:11434/api/generate` as the endpoint. WatchNT does not install an LLM automatically.
+4. Alternatively choose a BYOK provider, enter its model and key, and explicitly allow cloud text processing. Provider usage charges, if any, are separate from WatchNT.
+5. Save and test connections. Diagnostics test the selected model and the cached Whisper weights.
 
-1. Click the WatchNT extension icon and open **Settings** (or open the Dashboard at any time).
-2. Choose your preferred LLM provider:
-   - **Ollama**: Enter your base URL (default: `http://localhost:11434` or `http://host.docker.internal:11434`) and model name (e.g., `llama3.2`, `mistral`, `qwen2.5`).
-   - **Groq**: Enter your Groq API key and select your model (e.g., `llama-3.3-70b-versatile`).
-   - **OpenAI**: Enter your OpenAI API key and model (e.g., `gpt-4o-mini`).
-   - **Google Gemini**: Enter your Gemini API key and model (e.g., `gemini-1.5-flash`).
-   - **OpenRouter**: Enter your OpenRouter API key and model identifier.
-3. Save settings. Your credentials remain stored locally on your machine.
+Open a Meet, Zoom Web, or Teams Web call. Start capture from the **extension toolbar popup**; Chromium requires the extension invocation for tab capture. Stop from the popup or floating controller. For captions mode, enable captions in the meeting before starting. The controller shows the source text, recording/processing state, and an ASR score where available. The score is not calibrated word accuracy.
 
----
+If capture or upload fails, go to Settings → Recover partial transcript before starting another recording. The recognized text is retained in extension-local storage; unprocessed buffered audio is not recoverable. Audio is processed in memory and is not archived by the live capture path.
 
-## Operating Guide
+## Existing installations
 
-1. **Enter Meeting**: Open an active meeting in Google Meet, Zoom Web, or Microsoft Teams Web.
-2. **Start Session**: Click the WatchNT extension icon and select **Start Recording**. When prompted by the browser, select the current meeting tab and ensure **Share audio** is enabled.
-3. **Monitor Live**: A non-intrusive floating indicator will display in the bottom corner of your meeting with real-time capture status.
-4. **End & Process**: Click **Stop Recording**. The extension will automatically transmit the session data to your local backend engine for transcription and intelligence extraction.
-5. **Access Insights**: Open the WatchNT Dashboard to review summaries, edit action items, filter past meetings by folder, and export documentation in Markdown or CSV formats.
+The first backend startup adds `transcription_language` and `cloud_text_consent` to SQLite settings, idempotently. No meeting-data migration is required. Existing cloud STT settings are forced local. Cloud LLM users must explicitly enable text consent once; their providers and keys are preserved. The API masks keys on read. Keys and data are stored locally, not encrypted at rest.
 
----
+Keep your existing backend working directory/database location. The default database remains `backend/watchnt.db` when launched there; `DATABASE_URL` and `MEETINGS_DIR` can override storage locations. Stop the backend before backing up the SQLite database and meeting directory.
 
-## Folder Structure
+## Docker
 
-```
-Watchnt/
-├── backend/
-│   ├── api/             # FastAPI routing (meetings, settings, folders, pipeline)
-│   ├── core/            # Logging and configuration
-│   ├── database/        # SQLAlchemy database engine and ORM models
-│   ├── schemas/         # Pydantic data contracts and validation schemas
-│   ├── services/        # Pipeline orchestration, STT, LLM factory, prompt registry
-│   ├── Dockerfile       # Container definition
-│   └── requirements.txt # Python dependencies
-├── extension/
-│   ├── src/
-│   │   ├── components/  # Reusable UI component system
-│   │   ├── content/     # Meeting tab injection and floating bot UI
-│   │   ├── dashboard/   # Intelligence dashboard, settings, meeting detail views
-│   │   ├── popup/       # Extension popup controller
-│   │   └── services/    # Export service, API client, background messaging
-│   ├── manifest.json    # Chrome Manifest V3 configuration
-│   └── package.json     # Extension build scripts and dependencies
-├── docker-compose.yml   # Multi-container orchestration
-└── README.md
+```powershell
+docker compose up --build -d
+docker compose exec backend python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
 ```
 
----
+Compose exposes the API only at `127.0.0.1:8000`, persists the database and meetings in the existing volumes, and adds a persistent model cache. For host Ollama, configure `http://host.docker.internal:11434/api/generate` in Settings. That hostname is permitted only with `WATCHNT_ALLOW_DOCKER_HOST=1`, set by Compose. The host Ollama installation must be reachable from the container. Native execution is simplest for fully local Ollama.
 
-## Contributing
+## Verification
 
-Contributions, bug reports, and feature proposals are welcome.
+From the repository root:
 
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/amazing-feature`).
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`).
-4. Push to the branch (`git push origin feature/amazing-feature`).
-5. Open a Pull Request.
+```powershell
+python -m pip install pytest
+python -m pytest backend/tests -q
+npm run build --prefix extension
+npm run lint --prefix extension
+npm audit --prefix extension
+```
 
-Please see the [Issues page](https://github.com/avirooppal/Watchnt/issues) for planned roadmap items and known issues.
+The tests use temporary databases and meeting directories. For the real Chromium UI smoke test, install Python Playwright and its Chromium runtime, build the extension, ensure port 8000 is free, and run:
 
----
+```powershell
+python -m pip install playwright
+python -m playwright install chromium
+python scripts/ui_smoke.py
+```
 
-## License
+The script loads the actual built extension and an isolated local backend. It also checks failed-save rollback, rename dialogs, keyboard tabs, capture UI states, and automated accessibility using the development-only `axe-core` dependency. See [UI design and verification](docs/UI_DESIGN.md) for the shared design system and reload steps. It checks folder creation/move, search, saved action completion, detail/transcript, export, language settings, Spanish persistence, and mobile overflow. Optional real STT integration is described in [architecture and verification notes](docs/ENGINE_UPGRADE.md).
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more details.
+## Limits and next work
+
+Live windows can split words at boundaries and miss rapid language switches within one window. Tab/microphone separation gives **Me / Others**, not identities for multiple remote speakers. Caption speaker names depend on the platform DOM. Multi-hour LLM context management, multilingual accuracy benchmarks on real meeting audio, true multi-speaker diarization, and live-call compatibility testing remain priorities. Successful extraction stages are retained even if another stage fails; the meeting is marked as needing attention and can be retried.
+
+See [architecture decisions](docs/ENGINE_UPGRADE.md) for tradeoffs, privacy boundaries, and the exact verification scope.

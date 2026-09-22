@@ -1,536 +1,400 @@
-import { useState, useEffect } from 'react';
-import { useToast } from '../contexts/ToastContext';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Skeleton } from '../components/Skeleton';
-import { Select } from '../components/Select';
-
-export default function Settings() {
-  const { showToast } = useToast();
+import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { api, json } from "../services/api";
+import { Button } from "../components/Button";
+import { Icon } from "../components/Icon";
+import { Notice, Skeleton } from "../components/Feedback";
+import { Input } from "../components/Input";
+export default function Settings({
+  setup,
+  onValidated,
+  onBusyChange,
+}: {
+  setup?: "speech" | "provider";
+  onValidated?: () => void;
+  onBusyChange?: (busy: boolean) => void;
+} = {}) {
+  const { t, i18n } = useTranslation();
+  const [config, setConfig] = useState<Record<string, string> | null>(null);
+  const [snapshot, setSnapshot] = useState("");
+  const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [activeTab, setActiveTab] = useState('ai_providers');
-  
-  const [backendApiUrl, setBackendApiUrl] = useState('http://localhost:8000');
-  
-  const [config, setConfig] = useState({
-    transcription_provider: 'local',
-    llm_provider: 'ollama',
-    transcription_model: '',
-    llm_model: '',
-    ollama_base_url: 'http://localhost:11434/api/generate',
-    openai_api_key: '',
-    groq_api_key: '',
-    gemini_api_key: '',
-    openrouter_api_key: '',
-    summary_prompt_template: '',
-    email_prompt_template: ''
-  });
-
-  // Local preferences
-  const [generalPrefs, setGeneralPrefs] = useState({
-    autoDetectMeetings: true,
-    confirmBeforeExit: true,
-    defaultLanguage: 'en',
-    enableNotifications: true,
-  });
-
-  const [recordingPrefs, setRecordingPrefs] = useState({
-    autoEnableCaptions: true,
-    captureGoogleMeet: true,
-    captureZoom: true,
-    captureTeams: true,
-    showInMeetingHUD: true,
-  });
-
-  const [appearancePrefs, setAppearancePrefs] = useState({
-    density: 'comfortable',
-    themeAccent: 'amber',
-  });
-
-  const [testResults, setTestResults] = useState<any>(null);
-
+  const [failed, setFailed] = useState(false);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
-    const storedBackend = localStorage.getItem('backendUrl') || 'http://localhost:8000';
-    setBackendApiUrl(storedBackend);
-
-    // Load local preferences from storage if available
-    chrome.storage?.local?.get(['generalPrefs', 'recordingPrefs', 'appearancePrefs'], (res: any) => {
-      if (res?.generalPrefs) setGeneralPrefs(res.generalPrefs);
-      if (res?.recordingPrefs) setRecordingPrefs(res.recordingPrefs);
-      if (res?.appearancePrefs) setAppearancePrefs(res.appearancePrefs);
-    });
-    
-    fetch(`${storedBackend}/config`)
-      .then(res => res.json())
-      .then(data => { 
-        setConfig(data); 
-        setLoading(false); 
+    onBusyChange?.(busy);
+    return () => onBusyChange?.(false);
+  }, [busy, onBusyChange]);
+  const [results, setResults] = useState<
+    Record<string, { status: string; message: string }>
+  >({});
+  const load = () =>
+    api("/config")
+      .then((value) => {
+        setConfig(value);
+        setSnapshot(JSON.stringify(value));
+        setFailed(false);
+        setMessage("");
       })
-      .catch(() => { 
-        showToast('Failed to load config from backend.', 'error'); 
-        setLoading(false); 
-      });
-  }, [showToast]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    localStorage.setItem('backendUrl', backendApiUrl);
-    chrome.storage?.local?.set({
-      generalPrefs,
-      recordingPrefs,
-      appearancePrefs
-    });
-
+      .catch((error) => {
+        setFailed(true);
+        setMessage(error.message);
+      })
+      .finally(() => setLoading(false));
+  useEffect(() => {
+    void load();
+  }, []);
+  const update = (key: string, value: string) =>
+    setConfig((old) => ({ ...old, [key]: value }));
+  async function save(test = false) {
+    if (!config) return;
+    if (
+      setup !== "speech" &&
+      config.llm_provider !== "ollama" &&
+      config.cloud_text_consent !== "yes"
+    ) {
+      setFailed(true);
+      setMessage(t("consentNeeded"));
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    setFailed(false);
     try {
-      const payload: Record<string, string> = {};
-      const keyFields = [
-        "openai_api_key",
-        "groq_api_key",
-        "gemini_api_key",
-        "openrouter_api_key",
-      ];
-
-      for (const [key, value] of Object.entries(config)) {
+      const payload = Object.fromEntries(
+        Object.entries(config).filter(
+          ([key, value]) =>
+            !(key.endsWith("_api_key") && value.includes("****")),
+        ),
+      );
+      const saved = await api("/config", json("POST", payload));
+      setConfig(saved);
+      setSnapshot(JSON.stringify(saved));
+      if (test) {
+        const checks = await api<
+          Record<string, { status: string; message: string }>
+        >("/config/test", {
+          method: "POST",
+          signal: AbortSignal.timeout(90000),
+        });
+        setResults(checks);
         if (
-          keyFields.includes(key) &&
-          typeof value === "string" &&
-          value.includes("****")
-        ) {
-          continue;
-        }
-        payload[key] = value;
-      }
-
-      const res = await fetch(`${backendApiUrl}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        showToast('Settings saved successfully.', 'success');
-      } else {
-        showToast('Failed to save settings.', 'error');
-      }
-    } catch {
-      showToast('Error connecting to backend.', 'error');
+          checks.whisper?.status === "ok" &&
+          checks[saved.llm_provider]?.status === "ok"
+        )
+          onValidated?.();
+      } else if (setup === "speech") onValidated?.();
+      setMessage(t("saved"));
+    } catch (error) {
+      setFailed(true);
+      setMessage(String(error));
+    } finally {
+      setBusy(false);
     }
-    setSaving(false);
-  };
-
-  const handleTest = async () => {
-    setTesting(true);
-    setTestResults(null);
-    try {
-      const payload: Record<string, string> = {};
-      const keyFields = ["openai_api_key", "groq_api_key", "gemini_api_key", "openrouter_api_key"];
-      for (const [key, value] of Object.entries(config)) {
-        if (keyFields.includes(key) && typeof value === "string" && value.includes("****")) continue;
-        payload[key] = value;
-      }
-      await fetch(`${backendApiUrl}/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const res = await fetch(`${backendApiUrl}/config/test`, { method: 'POST' });
-      const data = await res.json();
-      setTestResults(data);
-      showToast('Diagnostics completed', 'info');
-    } catch {
-      showToast('Error testing connections.', 'error');
-    }
-    setTesting(false);
-  };
-
-  const TABS = [
-    { id: 'ai_providers', label: 'AI Engine (BYOK)' },
-    { id: 'templates', label: 'Prompt Templates' },
-    { id: 'recording', label: 'Meeting Capture' },
-    { id: 'general', label: 'General Preferences' },
-    { id: 'appearance', label: 'Appearance' },
-    { id: 'advanced', label: 'Engine & Endpoints' }
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Skeleton className="w-40 h-8 rounded-lg" />
-          <Skeleton className="w-80 h-48 rounded-xl" />
-        </div>
-      </div>
-    );
   }
-
+  async function recover() {
+    setBusy(true);
+    try {
+      const saved = await chrome.storage.local.get([
+        "recoveryTranscript",
+        "recoveryMeetingId",
+        "isRecording",
+        "isUploading",
+      ]);
+      if (saved.isRecording || saved.isUploading) {
+        setMessage(t("processing"));
+        return;
+      }
+      if (!saved.recoveryMeetingId) {
+        setMessage(t("noRecovery"));
+        return;
+      }
+      const form = new FormData();
+      form.append("meeting_id", String(saved.recoveryMeetingId));
+      form.append(
+        "transcript_json",
+        JSON.stringify(saved.recoveryTranscript || []),
+      );
+      await api("/upload_transcript", { method: "POST", body: form });
+      await chrome.storage.local.remove([
+        "recoveryTranscript",
+        "recoveryMeetingId",
+        "isRecording",
+        "isUploading",
+      ]);
+      await chrome.storage.local.set({
+        isRecording: false,
+        isUploading: false,
+        captureError: "",
+      });
+      setMessage(t("recovered"));
+    } catch (error) {
+      setFailed(true);
+      setMessage(String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="min-h-[calc(100vh-64px)] w-full flex bg-signal-ink text-text-primary">
-      
-      {/* Sidebar Navigation - Identical to MeetingList layout */}
-      <aside className="w-64 border-r border-border-hairline bg-signal-surface/40 p-4 shrink-0 flex flex-col gap-1">
-        <div className="px-2 mb-4">
-          <h2 className="text-base font-semibold tracking-tight text-white">Settings</h2>
-          <p className="text-xs text-text-muted">Configuration & BYOK Engine</p>
-        </div>
-
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === tab.id 
-                ? 'bg-signal-surface-raised text-white border border-border-hairline shadow-sm' 
-                : 'text-text-secondary hover:bg-signal-surface hover:text-white'
-            }`}
+    <div className={setup ? "setup-settings" : "page settings-page"}>
+      {!setup && (
+        <>
+          <div className="eyebrow">{t("preferences")}</div>
+          <h1>{t("settings")}</h1>
+          <p className="lede">{t("settingsIntro")}</p>
+          <Link className="back-link" to="/onboarding">
+            {t("setupAgain")}
+          </Link>
+        </>
+      )}
+      {message && (
+        <Notice kind={failed ? "error" : "success"}>{message}</Notice>
+      )}
+      {loading ? (
+        <Skeleton />
+      ) : !config ? (
+        <section className="panel stack engine-help">
+          <h2>{t("startBackend")}</h2>
+          <p>{t("backendInstructions")}</p>
+          <pre>
+            <code>
+              {
+                "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend.ps1"
+              }
+            </code>
+          </pre>
+          <Button
+            onClick={() => {
+              setLoading(true);
+              void load();
+            }}
           >
-            {tab.label}
-          </button>
-        ))}
-      </aside>
+            {t("retry")}
+          </Button>
+        </section>
+      ) : (
+        <div className="settings-layout">
+          <fieldset disabled={busy} className="settings-main">
+            {setup !== "provider" && (
+              <section className="panel settings-panel stack">
+                <div className="settings-panel-header">
+                  <span className="section-icon">
+                    <Icon name="mic" />
+                  </span>
+                  <div>
+                    <h2>{t("speech")}</h2>
+                    <p>{t("speechDescription")}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    try {
+                      const stream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                      });
+                      stream.getTracks().forEach((track) => track.stop());
+                      setFailed(false);
+                      setMessage(t("savedMic"));
+                    } catch (e) {
+                      setFailed(true);
+                      setMessage(String(e));
+                    }
+                  }}
+                >
+                  {t("microphone")}
+                </Button>
 
-      {/* Main Content Area */}
-      <main className="flex-1 min-w-0 px-6 sm:px-10 py-8 max-w-4xl overflow-y-auto">
-        <div className="space-y-8 pb-32">
-          
-          {/* Section Header with Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-hairline pb-4">
-            <div>
-              <h3 className="text-xl font-bold tracking-tight text-white">
-                {TABS.find(t => t.id === activeTab)?.label}
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={handleTest} isLoading={testing} className="text-xs rounded-lg px-3.5 py-2">
-                Test Connection
-              </Button>
-              <Button onClick={handleSave} isLoading={saving} className="text-xs font-semibold rounded-lg px-4 py-2">
-                Save Changes
-              </Button>
-            </div>
-          </div>
-
-          {/* Test Results Banner */}
-          {testResults && (
-            <div className="glass-panel border border-border-hairline rounded-2xl p-6 space-y-4 shadow-floating animate-fade-in">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-text-muted font-bold">Diagnostic Results</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {Object.entries(testResults).map(([key, result]: [string, any]) => (
-                  <div key={key} className="flex items-start gap-3 p-4 rounded-xl bg-signal-ink border border-border-hairline">
-                    {result.status === 'ok' ? (
-                      <div className="text-state-success mt-0.5">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                      </div>
-                    ) : (
-                      <div className="text-state-danger mt-0.5">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                      </div>
+                <label>
+                  {t("speechLanguage")}
+                  <select
+                    value={config.transcription_language}
+                    onChange={(e) =>
+                      update("transcription_language", e.target.value)
+                    }
+                  >
+                    <option value="auto">{t("auto")}</option>
+                    {[
+                      ["en", "English"],
+                      ["es", "Español"],
+                      ["hi", "हिन्दी"],
+                      ["bn", "বাংলা"],
+                      ["fr", "Français"],
+                      ["de", "Deutsch"],
+                      ["ja", "日本語"],
+                      ["zh", "中文"],
+                      ["ar", "العربية"],
+                      ["pt", "Português"],
+                    ].map(([code, name]) => (
+                      <option value={code} key={code}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  {t("language")}
+                  <select
+                    value={i18n.language}
+                    onChange={(e) => {
+                      setMessage("");
+                      void i18n.changeLanguage(e.target.value);
+                      void chrome.storage.local.set({
+                        uiLanguage: e.target.value,
+                      });
+                    }}
+                  >
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                  </select>
+                </label>
+              </section>
+            )}
+            {setup !== "speech" && (
+              <section className="panel settings-panel stack">
+                <div className="settings-panel-header">
+                  <span className="section-icon">
+                    <Icon name="sparkle" />
+                  </span>
+                  <div>
+                    <h2>{t("provider")}</h2>
+                    <p>{t("providerDescription")}</p>
+                  </div>
+                </div>
+                <Notice>{t("privacy")}</Notice>
+                <label>
+                  {t("provider")}
+                  <select
+                    aria-label={t("provider")}
+                    value={config.llm_provider}
+                    onChange={(e) => {
+                      update("llm_provider", e.target.value);
+                      update("cloud_text_consent", "no");
+                      update("llm_model", "");
+                    }}
+                  >
+                    {["ollama", "groq", "openai", "gemini", "openrouter"].map(
+                      (p) => (
+                        <option key={p} value={p}>
+                          {p === "ollama"
+                            ? "Ollama · " + t("keepLocal")
+                            : p + " · " + t("cloud")}
+                        </option>
+                      ),
                     )}
-                    <div>
-                      <p className="text-xs font-medium capitalize text-text-primary">{key}</p>
-                      <p className="text-[11px] font-mono text-text-muted mt-1 leading-relaxed">{result.message}</p>
-                    </div>
+                  </select>
+                </label>
+                <Input
+                  label={t("model")}
+                  hint={t("modelHint")}
+                  value={config.llm_model}
+                  onChange={(e) => update("llm_model", e.target.value)}
+                />
+                {config.llm_provider === "ollama" ? (
+                  <Input
+                    label={t("ollama")}
+                    value={config.ollama_base_url}
+                    onChange={(e) => update("ollama_base_url", e.target.value)}
+                  />
+                ) : (
+                  <>
+                    <Input
+                      label={t("key")}
+                      type={showKey ? "text" : "password"}
+                      hint={t("keyHint")}
+                      autoComplete="off"
+                      value={config[config.llm_provider + "_api_key"] || ""}
+                      onChange={(e) =>
+                        update(config.llm_provider + "_api_key", e.target.value)
+                      }
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-pressed={showKey}
+                      onClick={() => setShowKey(!showKey)}
+                    >
+                      {t(showKey ? "hideKey" : "showKey")}
+                    </Button>
+                    <label className="check-row consent-row">
+                      <input
+                        type="checkbox"
+                        checked={config.cloud_text_consent === "yes"}
+                        onChange={(e) =>
+                          update(
+                            "cloud_text_consent",
+                            e.target.checked ? "yes" : "no",
+                          )
+                        }
+                      />
+                      <span>{t("consent")}</span>
+                    </label>
+                  </>
+                )}
+                {Object.entries(results).map(([name, result]) => (
+                  <div className="result-row" key={name}>
+                    <strong>{name}</strong>
+                    <span>
+                      {result.status} · {result.message}
+                    </span>
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 1: AI PROVIDERS */}
-          {activeTab === 'ai_providers' && (
-             <div className="space-y-8 animate-fade-in">
-                <section className="space-y-4">
+              </section>
+            )}
+            {!setup && (
+              <section className="panel settings-panel stack">
+                <div className="settings-panel-header">
+                  <span className="section-icon">
+                    <Icon name="refresh" />
+                  </span>
                   <div>
-                    <h4 className="text-base font-semibold text-text-primary">Intelligence Engine (LLM)</h4>
-                    <p className="text-xs text-text-muted">Choose which provider generates meeting summaries and action items.</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1.5 relative z-50">
-                      <label className="text-xs font-medium text-text-muted font-mono uppercase text-[10px]">Provider</label>
-                      <Select 
-                        value={config.llm_provider}
-                        onChange={(val) => setConfig({...config, llm_provider: val})}
-                        options={[
-                          { value: 'ollama', label: 'Ollama (100% Local & Private)' },
-                          { value: 'groq', label: 'Groq (Ultra-Fast LPU)' },
-                          { value: 'openai', label: 'OpenAI (GPT-4o)' },
-                          { value: 'gemini', label: 'Google Gemini (1.5 Flash/Pro)' },
-                          { value: 'openrouter', label: 'OpenRouter (Multi-Provider)' }
-                        ]}
-                      />
-                    </div>
-                    <Input 
-                      label="Model Identifier" 
-                      value={config.llm_model} 
-                      onChange={(e) => setConfig({...config, llm_model: e.target.value})} 
-                      placeholder="e.g. llama3.2, gpt-4o-mini"
-                    />
-                  </div>
-                </section>
-
-                <hr className="border-border-hairline" />
-
-                <section className="space-y-4">
-                  <div>
-                    <h4 className="text-base font-semibold text-text-primary">Authentication & Endpoints</h4>
-                    <p className="text-xs text-text-muted">Credentials are saved locally in SQLite and never transmitted externally.</p>
-                  </div>
-                  
-                  <div className="space-y-4 bg-signal-surface/40 p-6 rounded-2xl border border-border-hairline">
-                    {config.llm_provider === 'ollama' && (
-                      <Input 
-                        label="Local Ollama Base URL" 
-                        value={config.ollama_base_url} 
-                        onChange={(e) => setConfig({...config, ollama_base_url: e.target.value})} 
-                        placeholder="http://localhost:11434/api/generate"
-                      />
-                    )}
-                    {config.llm_provider === 'openai' && (
-                      <Input 
-                        type="password" 
-                        label="OpenAI API Key" 
-                        value={config.openai_api_key} 
-                        onChange={(e) => setConfig({...config, openai_api_key: e.target.value})} 
-                        placeholder="sk-..."
-                      />
-                    )}
-                    {config.llm_provider === 'groq' && (
-                      <Input 
-                        type="password" 
-                        label="Groq API Key" 
-                        value={config.groq_api_key} 
-                        onChange={(e) => setConfig({...config, groq_api_key: e.target.value})} 
-                        placeholder="gsk_..."
-                      />
-                    )}
-                    {config.llm_provider === 'gemini' && (
-                      <Input 
-                        type="password" 
-                        label="Google Gemini API Key" 
-                        value={config.gemini_api_key} 
-                        onChange={(e) => setConfig({...config, gemini_api_key: e.target.value})} 
-                        placeholder="AIzaSy..."
-                      />
-                    )}
-                    {config.llm_provider === 'openrouter' && (
-                      <Input 
-                        type="password" 
-                        label="OpenRouter API Key" 
-                        value={config.openrouter_api_key} 
-                        onChange={(e) => setConfig({...config, openrouter_api_key: e.target.value})} 
-                        placeholder="sk-or-v1-..."
-                      />
-                    )}
-                  </div>
-                </section>
-             </div>
-          )}
-          
-          {/* TAB 2: TEMPLATES */}
-          {activeTab === 'templates' && (
-             <div className="space-y-8 animate-fade-in">
-                <section className="space-y-4">
-                  <div>
-                    <h4 className="text-base font-semibold text-text-primary">Summary Prompt Directive</h4>
-                    <p className="text-xs text-text-muted">Customize the prompt template passed to your LLM. Variable available: <code className="text-accent-amber font-mono">{'{transcript}'}</code></p>
-                  </div>
-                  <div>
-                    <textarea 
-                      className="w-full h-36 p-4 bg-signal-surface border border-border-strong rounded-xl text-xs text-text-primary focus:outline-none focus:border-accent-amber font-mono leading-relaxed" 
-                      value={config.summary_prompt_template} 
-                      onChange={(e) => setConfig({...config, summary_prompt_template: e.target.value})} 
-                      placeholder="Leave blank to use default production prompt, or customize: Summarize the following meeting: {transcript}"
-                    />
-                  </div>
-                </section>
-
-                <hr className="border-border-hairline" />
-
-                <section className="space-y-4">
-                  <div>
-                    <h4 className="text-base font-semibold text-text-primary">Follow-up Email Prompt Directive</h4>
-                    <p className="text-xs text-text-muted">Variables available: <code className="text-accent-amber font-mono">{'{summary}'}</code>, <code className="text-accent-amber font-mono">{'{actions}'}</code></p>
-                  </div>
-                  <div>
-                    <textarea 
-                      className="w-full h-36 p-4 bg-signal-surface border border-border-strong rounded-xl text-xs text-text-primary focus:outline-none focus:border-accent-amber font-mono leading-relaxed" 
-                      value={config.email_prompt_template} 
-                      onChange={(e) => setConfig({...config, email_prompt_template: e.target.value})} 
-                      placeholder="Draft a crisp executive email recap based on: {summary} and actions: {actions}"
-                    />
-                  </div>
-                </section>
-             </div>
-          )}
-
-          {/* TAB 3: RECORDING */}
-          {activeTab === 'recording' && (
-            <div className="space-y-6 animate-fade-in">
-              <div>
-                <h4 className="text-base font-semibold text-text-primary">Meeting Platforms & In-Meeting HUD</h4>
-                <p className="text-xs text-text-muted">Configure how WatchNT detects and captures live calls.</p>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center justify-between p-4 rounded-xl bg-signal-surface border border-border-hairline cursor-pointer">
-                  <div>
-                    <span className="text-xs font-semibold text-text-primary block">Show In-Meeting Floating HUD Pill</span>
-                    <span className="text-[11px] text-text-muted">Renders a compact, draggable recording widget inside the meeting tab.</span>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={recordingPrefs.showInMeetingHUD} 
-                    onChange={e => setRecordingPrefs({...recordingPrefs, showInMeetingHUD: e.target.checked})}
-                    className="w-4 h-4 text-accent-amber rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-4 rounded-xl bg-signal-surface border border-border-hairline cursor-pointer">
-                  <div>
-                    <span className="text-xs font-semibold text-text-primary block">Google Meet Auto-Captions</span>
-                    <span className="text-[11px] text-text-muted">Automatically triggers closed captions when recording starts.</span>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={recordingPrefs.autoEnableCaptions} 
-                    onChange={e => setRecordingPrefs({...recordingPrefs, autoEnableCaptions: e.target.checked})}
-                    className="w-4 h-4 text-accent-amber rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-4 rounded-xl bg-signal-surface border border-border-hairline cursor-pointer">
-                  <div>
-                    <span className="text-xs font-semibold text-text-primary block">Active Platform Listeners</span>
-                    <span className="text-[11px] text-text-muted">Monitor meet.google.com, zoom.us, and teams.microsoft.com</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-state-success font-bold uppercase">All Active</span>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: GENERAL */}
-          {activeTab === 'general' && (
-            <div className="space-y-6 animate-fade-in">
-              <div>
-                <h4 className="text-base font-semibold text-text-primary">Application Preferences</h4>
-                <p className="text-xs text-text-muted">Configure default behaviors and meeting safeguards.</p>
-              </div>
-
-              <div className="space-y-3">
-                <label className="flex items-center justify-between p-4 rounded-xl bg-signal-surface border border-border-hairline cursor-pointer">
-                  <div>
-                    <span className="text-xs font-semibold text-text-primary block">Confirm Before Leaving Active Call</span>
-                    <span className="text-[11px] text-text-muted">Warns if you attempt to close a meeting tab while recording is in progress.</span>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={generalPrefs.confirmBeforeExit} 
-                    onChange={e => setGeneralPrefs({...generalPrefs, confirmBeforeExit: e.target.checked})}
-                    className="w-4 h-4 text-accent-amber rounded cursor-pointer"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-4 rounded-xl bg-signal-surface border border-border-hairline cursor-pointer">
-                  <div>
-                    <span className="text-xs font-semibold text-text-primary block">System Notifications</span>
-                    <span className="text-[11px] text-text-muted">Display toast alerts when meetings finish transcribing and extracting.</span>
-                  </div>
-                  <input 
-                    type="checkbox" 
-                    checked={generalPrefs.enableNotifications} 
-                    onChange={e => setGeneralPrefs({...generalPrefs, enableNotifications: e.target.checked})}
-                    className="w-4 h-4 text-accent-amber rounded cursor-pointer"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: APPEARANCE */}
-          {activeTab === 'appearance' && (
-            <div className="space-y-6 animate-fade-in">
-              <div>
-                <h4 className="text-base font-semibold text-text-primary">Theme & Density</h4>
-                <p className="text-xs text-text-muted">Personalize your meeting library and dossier viewing experience.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-5 rounded-2xl bg-signal-surface border border-border-hairline">
-                  <span className="text-xs font-mono uppercase text-text-muted block mb-3 font-bold">Accent Color</span>
-                  <div className="flex items-center gap-3">
-                    <button 
-                      onClick={() => setAppearancePrefs({...appearancePrefs, themeAccent: 'amber'})}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent-amber/15 text-accent-amber border border-accent-amber text-xs font-bold"
-                    >
-                      <span className="w-3 h-3 rounded-full bg-accent-amber" />
-                      Executive Amber
-                    </button>
+                    <h2>{t("recover")}</h2>
+                    <p>{t("recoveryDescription")}</p>
                   </div>
                 </div>
+                <p>{t("recoverHelp")}</p>
+                <Button disabled={busy} variant="secondary" onClick={recover}>
+                  {t("recover")}
+                </Button>
+              </section>
+            )}
+          </fieldset>
 
-                <div className="p-5 rounded-2xl bg-signal-surface border border-border-hairline">
-                  <span className="text-xs font-mono uppercase text-text-muted block mb-3 font-bold">Layout Density</span>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setAppearancePrefs({...appearancePrefs, density: 'comfortable'})}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
-                        appearancePrefs.density === 'comfortable' ? 'bg-signal-surface-raised text-text-primary border border-white/20' : 'text-text-muted'
-                      }`}
-                    >
-                      Comfortable
-                    </button>
-                    <button 
-                      onClick={() => setAppearancePrefs({...appearancePrefs, density: 'compact'})}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all ${
-                        appearancePrefs.density === 'compact' ? 'bg-signal-surface-raised text-text-primary border border-white/20' : 'text-text-muted'
-                      }`}
-                    >
-                      Compact
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <div className="save-bar">
+            <span>
+              <Icon
+                name={snapshot === JSON.stringify(config) ? "check" : "edit"}
+              />
+              {t(snapshot === JSON.stringify(config) ? "upToDate" : "unsaved")}
+            </span>{" "}
+            <div className="row">
+              <Button
+                isLoading={busy}
+                onClick={() => save(setup === "provider")}
+              >
+                {t(
+                  setup
+                    ? setup === "provider"
+                      ? "setupTest"
+                      : "saveContinue"
+                    : "save",
+                )}
+              </Button>
+              {!setup && (
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => save(true)}
+                >
+                  {t("diagnostics")}
+                </Button>
+              )}
             </div>
-          )}
-
-          {/* TAB 6: ADVANCED */}
-          {activeTab === 'advanced' && (
-            <div className="space-y-6 animate-fade-in">
-               <section className="space-y-4">
-                  <div>
-                    <h4 className="text-base font-semibold text-text-primary">Engine Endpoints</h4>
-                    <p className="text-xs text-text-muted">Points to your local or remote WatchNT FastAPI backend service.</p>
-                  </div>
-                  <div className="space-y-4 bg-signal-surface/40 p-6 rounded-2xl border border-border-hairline">
-                    <Input 
-                      label="Backend API Base URL" 
-                      value={backendApiUrl} 
-                      onChange={(e) => setBackendApiUrl(e.target.value)} 
-                    />
-                    <div className="text-[11px] font-mono text-text-muted flex items-center justify-between pt-2">
-                      <span>Default: <code>http://localhost:8000</code></span>
-                      <button 
-                        onClick={() => {
-                          fetch(`${backendApiUrl}/health`)
-                            .then(r => r.ok ? showToast('Endpoint reachable!', 'success') : showToast('Endpoint returned error', 'error'))
-                            .catch(() => showToast('Failed to reach endpoint', 'error'));
-                        }}
-                        className="text-accent-amber hover:underline"
-                      >
-                        Ping Endpoint
-                      </button>
-                    </div>
-                  </div>
-               </section>
-            </div>
-          )}
-
+          </div>
         </div>
-      </main>
+      )}
     </div>
   );
 }
-

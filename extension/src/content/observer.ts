@@ -3,106 +3,73 @@ export interface TranscriptBlock {
   text: string;
   timestamp: string;
 }
-
 let transcript: TranscriptBlock[] = [];
+let pending: TranscriptBlock | null = null;
 let observer: MutationObserver | null = null;
-let transcriptTargetNode: Element | null = null;
-let buffer = { speaker: '', text: '', timestamp: '' };
-let interval: ReturnType<typeof setInterval> | null = null;
-
+let timer: ReturnType<typeof setInterval> | null = null;
+const selectors = location.hostname.includes("zoom.us")
+  ? [".closed-caption__content"]
+  : location.hostname.includes("teams.")
+    ? [
+        '[data-tid="closed-caption-text"]',
+        '[data-tid="closed-captions-renderer"]',
+      ]
+    : [".nMcdL", '[jsname="tgaKEf"]'];
+function commit() {
+  if (pending?.text) transcript.push(pending);
+  pending = null;
+}
+function scan() {
+  for (const selector of selectors) {
+    const blocks = Array.from(document.querySelectorAll(selector));
+    const block = blocks.at(-1);
+    if (!block) continue;
+    const speaker =
+      block
+        .querySelector('.NWpY1d, [data-tid="author"], .speaker-name')
+        ?.textContent?.trim() || "Unknown";
+    const textNode = block.querySelector('.ygicle, [data-tid="caption-text"]');
+    let text = (textNode?.textContent || block.textContent || "").trim();
+    if (!textNode && speaker !== "Unknown" && text.startsWith(speaker))
+      text = text.slice(speaker.length).trim();
+    if (!text) continue;
+    if (
+      pending &&
+      (pending.speaker !== speaker ||
+        (!text.startsWith(pending.text) &&
+          !pending.text.startsWith(text) &&
+          text !== pending.text))
+    )
+      commit();
+    pending = {
+      speaker,
+      text,
+      timestamp: pending?.timestamp || new Date().toISOString(),
+    };
+    break;
+  }
+}
 export function startObserver() {
+  stopObserver();
   transcript = [];
-  buffer = { speaker: '', text: '', timestamp: '' };
-  
-  // Attempt to auto-enable CC
-  const icons = Array.from(document.querySelectorAll('.google-symbols'));
-  const ccButton = icons.find(el => el.textContent?.includes('closed_caption_off'));
-  if (ccButton) {
-    (ccButton as HTMLElement).click();
-  }
-
-  const init = () => {
-    const targetNode = document.querySelector(`div[role="region"][tabindex="0"]`);
-    if (targetNode) {
-      attachObserver(targetNode);
-    }
-  };
-  
-  // Delay to allow CC DOM to inject
-  setTimeout(init, 2000);
-  
-  // Keep polling in case CC is toggled off and on, resetting the container
-  interval = setInterval(() => {
-    const currentNode = document.querySelector(`div[role="region"][tabindex="0"]`);
-    if (currentNode && (!transcriptTargetNode || currentNode !== transcriptTargetNode || !transcriptTargetNode.isConnected)) {
-      attachObserver(currentNode);
-    }
-  }, 2000);
-}
-
-function attachObserver(node: Element) {
-  pushBuffer();
-  
-  if (observer) {
-    observer.disconnect();
-  }
-  
-  transcriptTargetNode = node;
-  
-  observer = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      if (mutation.type === "characterData") {
-        const target = mutation.target.parentElement;
-        const blocks = target?.parentElement?.parentElement?.children;
-        if (!blocks) return;
-        
-        // Meet updates the last but second element when typing out live
-        const isLastButSecond = blocks[blocks.length - 3] === target?.parentElement;
-        
-        if (isLastButSecond) {
-          const speaker = target?.previousSibling?.textContent;
-          const text = target?.textContent;
-          
-          if (speaker && text) {
-            // New meeting or resume
-            if (buffer.text === "") {
-              buffer = { speaker, text, timestamp: new Date().toISOString() };
-            } else {
-              // Speaker changed
-              if (buffer.speaker !== speaker) {
-                pushBuffer();
-                buffer = { speaker, text, timestamp: new Date().toISOString() };
-              } else {
-                // Same speaker, handle very long continuous speaking reset
-                if ((text.length - buffer.text.length) < -250) {
-                  pushBuffer();
-                  buffer = { speaker, text, timestamp: new Date().toISOString() };
-                } else {
-                  buffer.text = text;
-                }
-              }
-            }
-          } else {
-            pushBuffer();
-          }
-        }
-      }
-    });
+  pending = null;
+  observer = new MutationObserver(scan);
+  observer.observe(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true,
   });
-  
-  observer.observe(node, { childList: true, attributes: true, subtree: true, characterData: true });
+  timer = setInterval(scan, 1000);
+  scan();
 }
-
-function pushBuffer() {
-  if (buffer.speaker && buffer.text) {
-    transcript.push({ ...buffer });
-  }
-  buffer = { speaker: '', text: '', timestamp: '' };
+export function currentTranscript() {
+  return [...transcript, ...(pending ? [pending] : [])];
 }
-
-export function stopObserver(): TranscriptBlock[] {
-  if (interval) clearInterval(interval);
-  if (observer) observer.disconnect();
-  pushBuffer();
+export function stopObserver() {
+  observer?.disconnect();
+  observer = null;
+  if (timer) clearInterval(timer);
+  timer = null;
+  commit();
   return transcript;
 }

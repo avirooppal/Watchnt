@@ -7,13 +7,16 @@ class OllamaProvider(LLMProvider):
         self.model = model or "llama3"
 
     async def generate_response(self, prompt: str) -> str:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=120.0, trust_env=False) as client:
             response = await client.post(
                 self.base_url,
                 json={
                     "model": self.model,
                     "prompt": prompt,
-                    "stream": False
+                    "stream": False,
+                    # Meeting extraction needs structured output, not hidden reasoning.
+                    # https://ollama.com/blog/thinking
+                    "think": False
                 }
             )
             if response.status_code == 200:

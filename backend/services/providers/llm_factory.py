@@ -11,6 +11,13 @@ class LLMProviderFactory:
     def create(settings: Settings) -> LLMProvider:
         provider_name = (settings.llm_provider or "ollama").lower()
         model = settings.llm_model or ""
+        if provider_name != "ollama" and getattr(settings, "cloud_text_consent", "no") != "yes":
+            raise ValueError("Cloud text extraction requires explicit consent in Settings")
+        if provider_name == "ollama":
+            from schemas.config import SettingsUpdate
+            SettingsUpdate(ollama_base_url=settings.ollama_base_url)
+        if provider_name not in {"ollama", "groq", "openai", "gemini", "openrouter"}:
+            raise ValueError("Unsupported AI provider")
 
         if provider_name == "groq":
             return GroqProvider(api_key=settings.groq_api_key, model=model)

@@ -1,4 +1,4 @@
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MEETINGS_DIR = os.path.join(BASE_DIR, "meetings")
+MEETINGS_DIR = os.environ.get("MEETINGS_DIR", os.path.join(BASE_DIR, "meetings"))

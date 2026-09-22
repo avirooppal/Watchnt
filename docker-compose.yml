@@ -7,14 +7,18 @@ services:
       dockerfile: backend/Dockerfile
     container_name: watchnt_backend
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./meetings:/app/meetings
       - ./data:/app/data
+      - whisper-cache:/root/.cache/huggingface
     environment:
-      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
+      - WATCHNT_ALLOW_DOCKER_HOST=1
       - DATABASE_URL=sqlite:////app/data/watchnt.db
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
+
+volumes:
+  whisper-cache:

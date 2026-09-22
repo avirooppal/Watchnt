@@ -100,3 +100,6 @@ DESIGN_SYSTEM.md
 extension/test.css
 image.png
 image copy.png
+
+# Generated local UI screenshots and verification fixtures
+artifacts/

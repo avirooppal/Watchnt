@@ -1,19 +1,20 @@
+"""Follow-up email drafts remain local; WatchNT never sends meeting data via SMTP."""
+import json
+from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from services.email_service import EmailService
+from core.deps import validate_meeting_id
+from core.paths import MEETINGS_DIR
 
 router = APIRouter()
-email_service = EmailService()
 
-class EmailRequest(BaseModel):
-    to_email: str
+@router.get("/email/{meeting_id}")
+def get_email_draft(meeting_id: str):
+    path = Path(MEETINGS_DIR) / validate_meeting_id(meeting_id) / "meeting.json"
+    if not path.exists():
+        raise HTTPException(404, "Meeting not found")
+    return json.loads(path.read_text(encoding="utf-8")).get("ai", {}).get("email", {})
 
 @router.post("/email/{meeting_id}")
-def send_email(meeting_id: str, request: EmailRequest):
-    try:
-        email_service.send_email(meeting_id, request.to_email)
-        return {"message": "Email sent successfully"}
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def send_email(meeting_id: str):
+    validate_meeting_id(meeting_id)
+    raise HTTPException(410, "SMTP sending is disabled by local-first policy. Export the email draft instead.")

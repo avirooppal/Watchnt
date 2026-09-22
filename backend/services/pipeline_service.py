@@ -58,8 +58,13 @@ class PipelineService:
         # Calculate duration based on last segment end time if available
         duration_minutes = 0
         if segments and 'end' in segments[-1]:
-            duration_minutes = int(segments[-1]['end'] // 60)
+            duration_minutes = int(max(seg.get('end', 0) for seg in segments) // 60)
             
+        elif len(segments) > 1 and segments[0].get("timestamp") and segments[-1].get("timestamp"):
+            try:
+                duration_minutes = int((datetime.fromisoformat(segments[-1]["timestamp"].replace("Z", "+00:00")) - datetime.fromisoformat(segments[0]["timestamp"].replace("Z", "+00:00"))).total_seconds() // 60)
+            except ValueError:
+                pass
         return {
             "words": word_count,
             "speakers": len(speakers),
@@ -73,15 +78,21 @@ class PipelineService:
         }
 
     async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list):
-        if not segments:
-            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+        if not any(segment.get("text", "").strip() for segment in segments):
+            message = "No speech was captured. Check microphone permission and meeting audio, or enable captions before caption capture."
+            os.makedirs(meeting_dir, exist_ok=True)
+            with open(os.path.join(meeting_dir, "meeting.json"), "w", encoding="utf-8") as output:
+                json.dump({"meeting": {"id": meeting_id}, "capture_error": message, "ai": {}}, output)
+            self.update_status(meeting_id, MeetingStatus.FAILED.value)
             return
 
         try:
             self.update_status(meeting_id, MeetingStatus.EXTRACTING_INTELLIGENCE.value)
             
+            languages = sorted({seg["language"] for seg in segments if seg.get("language")})
+            self.update_meeting_metadata(meeting_id, language=", ".join(languages) or None)
             # 1. Setup the Canonical JSON Model
-            full_text = "\n".join([f"[{seg.get('speaker', 'All')}]: {seg['text']}" for seg in segments])
+            full_text = "\n".join([f"[{seg.get('start', seg.get('timestamp', 'unknown time'))}] [{seg.get('speaker', 'Unknown')}]: {seg['text']}" for seg in segments])
             
             meeting_json = {
                 "schema_version": "1.0.0",
@@ -194,10 +205,12 @@ class PipelineService:
             # 4. Persist Canonical Model
             self.update_status(meeting_id, MeetingStatus.PERSISTING_MODEL.value)
             meeting_json_path = os.path.join(meeting_dir, "meeting.json")
-            with open(meeting_json_path, "w", encoding="utf-8") as f:
+            with open(meeting_json_path + ".tmp", "w", encoding="utf-8") as f:
                 json.dump(meeting_json, f, indent=2)
 
-            self.update_status(meeting_id, MeetingStatus.COMPLETED.value)
+            os.replace(meeting_json_path + ".tmp", meeting_json_path)
+            has_failures = any(block["status"] == "failed" for block in meeting_json["ai"].values())
+            self.update_status(meeting_id, MeetingStatus.FAILED.value if has_failures else MeetingStatus.COMPLETED.value)
             
         except Exception as e:
             logger.error(f"Error in post-transcription for {meeting_id}: {e}", exc_info=True)

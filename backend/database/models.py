@@ -33,6 +33,8 @@ class Settings(Base):
     
     id = Column(String, primary_key=True, default="default")
     transcription_provider = Column(String, default="local")
+    transcription_language = Column(String, default="auto")
+    cloud_text_consent = Column(String, default="no")
     llm_provider = Column(String, default="ollama")
     transcription_model = Column(String, default="base")
     llm_model = Column(String, default="llama3")
