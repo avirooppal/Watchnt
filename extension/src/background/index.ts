@@ -54,6 +54,19 @@ chrome.runtime.onMessage.addListener(
         pipelineStatus: "EXTRACTING_INTELLIGENCE",
       });
       pollPipelineStatus(message.payload.meetingId);
+    } else if (message.type === "REFRESH_PIPELINE") {
+      chrome.storage.local
+        .get(["currentMeetingId", "isRecording", "pipelineStatus"])
+        .then(async (state) => {
+          if (
+            !state.isRecording &&
+            state.currentMeetingId === message.payload?.meetingId &&
+            ["FAILED", "COMPLETED"].includes(String(state.pipelineStatus))
+          )
+            await pollPipelineStatus(String(state.currentMeetingId));
+          _sendResponse({ ok: true });
+        });
+      return true;
     } else if (message.type === "RECORDING_UPLOAD_FAILED") {
       chrome.storage.local.set({
         isUploading: false,
@@ -132,7 +145,7 @@ async function startRecording(mode = "audio") {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Meeting · " + new Date().toLocaleString(),
+          title: "Meeting Â· " + new Date().toLocaleString(),
         }),
       });
       if (!response.ok) throw new Error("Local engine unavailable");

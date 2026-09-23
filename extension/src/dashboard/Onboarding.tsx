@@ -87,6 +87,7 @@ export default function Onboarding() {
               <section className="panel setup-panel stack">
                 <h2>{t("setupBackend")}</h2>
                 <p>{t("setupBackendHelp")}</p>
+                <pre><code>{"docker compose up"}</code></pre>
                 <details>
                   <summary>{t("setupInstall")}</summary>
                   <p>{t("setupInstallHelp")}</p>
@@ -96,14 +97,6 @@ export default function Onboarding() {
                     </code>
                   </pre>
                 </details>
-                <p>{t("backendInstructions")}</p>
-                <pre>
-                  <code>
-                    {
-                      "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend.ps1"
-                    }
-                  </code>
-                </pre>
                 <details>
                   <summary>{t("setupOtherOS")}</summary>
                   <pre>
@@ -138,13 +131,13 @@ export default function Onboarding() {
                   <pre>
                     <code>
                       {
-                        "python -c \"from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')\""
+                        "docker compose restart backend"
                       }
                     </code>
                   </pre>
                   <p>{t("setupOllamaHelp")}</p>
                   <pre>
-                    <code>{"ollama serve\nollama list"}</code>
+                    <code>{"docker compose logs -f backend"}</code>
                   </pre>
                 </details>
                 <Settings

@@ -1,11 +1,31 @@
-
-
 services:
+  extension:
+    build:
+      context: .
+      dockerfile: extension/Dockerfile
+    pull_policy: build
+    volumes:
+      - ./extension/dist:/output
+    restart: "no"
+
+  ollama:
+    image: ollama/ollama@sha256:7ab595e4ead391f6818c7215297781282babe0701f6d9a9f8862ac591360a58b
+    environment:
+      OLLAMA_KEEP_ALIVE: "-1"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: watchnt_backend
+    pull_policy: build
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -13,12 +33,28 @@ services:
       - ./data:/app/data
       - whisper-cache:/root/.cache/huggingface
     environment:
-      - WATCHNT_ALLOW_DOCKER_HOST=1
-      - DATABASE_URL=sqlite:////app/data/watchnt.db
+      DATABASE_URL: sqlite:////app/data/watchnt.db
+      MEETINGS_DIR: /app/meetings
+      WATCHNT_ALLOW_DOCKER_HOST: "1"
+      WATCHNT_DOCKER: "1"
+      WATCHNT_DEFAULT_LLM_MODEL: ${WATCHNT_DEFAULT_LLM_MODEL:-qwen3:1.7b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      extension:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      start_period: 30m
+      retries: 3
+    init: true
     restart: unless-stopped
 
 
 volumes:
   whisper-cache:
+  ollama-models:

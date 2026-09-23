@@ -1,6 +1,7 @@
 import json
 import time
 import asyncio
+import httpx
 from pydantic import TypeAdapter
 
 from typing import Any, Dict, List
@@ -56,12 +57,15 @@ class LLMService:
         
         for attempt in range(max_retries):
             try:
-                return await asyncio.wait_for(provider.generate_response(prompt), timeout=120)
+                return await asyncio.wait_for(provider.generate_response(prompt), timeout=getattr(provider, "timeout_seconds", 120))
             except Exception as e:
                 error_str = str(e).lower()
+                transient = isinstance(e, (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException, httpx.TransportError, ConnectionError))
                 is_rate_limit = any(term in error_str for term in ["429", "502", "resourceexhausted", "rate limit", "unexpected response"])
                 
-                if attempt == max_retries - 1 or not is_rate_limit:
+                if attempt == max_retries - 1 or (transient and attempt >= 1) or not (is_rate_limit or transient):
+                    if transient:
+                        raise RuntimeError(f"{settings.llm_provider} timed out or lost its connection. Your transcript is saved. Retry processing or choose another model in Settings.") from None
                     raise
                 
                 delay = base_delay * (2 ** attempt)
@@ -126,7 +130,7 @@ class LLMService:
             duration_ms = int((time.time() - start_time) * 1000)
             return {
                 "status": "failed",
-                "error": str(e),
+                "error": str(e).strip() or f"{settings.llm_provider} request timed out. Your transcript is saved; retry processing or choose another model in Settings.",
                 "metadata": {
                     "provider": settings.llm_provider,
                     "model": settings.llm_model,

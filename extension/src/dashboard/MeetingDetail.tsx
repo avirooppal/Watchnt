@@ -107,6 +107,10 @@ export default function MeetingDetail() {
     setError("");
     try {
       await api(`/meeting/${id}/retry`, { method: "POST" });
+      void chrome.runtime.sendMessage({
+        type: "REFRESH_PIPELINE",
+        payload: { meetingId: id },
+      });
       await load();
     } catch (e) {
       setError(String(e));
@@ -406,7 +410,7 @@ export default function MeetingDetail() {
             ) : artifact?.status === "failed" ? (
               <div role="alert">
                 <h2>{t("sectionFailed")}</h2>
-                <p>{artifact.error}</p>
+                <p>{artifact.error || t("processingFailedHelp")}</p>
               </div>
             ) : artifact?.status !== "completed" ? (
               <p role="status">

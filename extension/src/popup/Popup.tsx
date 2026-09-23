@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "../i18n";
 import { Button } from "../components/Button";
@@ -14,6 +14,7 @@ export default function Popup() {
     [pending, setPending] = useState(false),
     [mode, setMode] = useState("audio"),
     [error, setError] = useState("");
+  const content = useRef<HTMLElement>(null);
   const timer = useRecordingTime(state.isRecording, state.recordingStartTime);
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) =>
@@ -44,9 +45,19 @@ export default function Popup() {
     !state.isUploading &&
     !!state.currentMeetingId &&
     ["COMPLETED", "FAILED"].includes(state.pipelineStatus || "");
+  useEffect(() => {
+    if (state.currentMeetingId && !state.isRecording)
+      void chrome.runtime.sendMessage({
+        type: "REFRESH_PIPELINE",
+        payload: { meetingId: state.currentMeetingId },
+      });
+  }, [state.currentMeetingId, state.isRecording]);
   const active = state.isRecording || state.isUploading;
+  useEffect(() => {
+    if (terminal && content.current) content.current.scrollTop = 0;
+  }, [terminal]);
   return (
-    <div className="popup-shell">
+    <div className={`popup-shell ${terminal ? "has-result" : ""}`}>
       <header className="popup-header">
         <Brand />
         <Button
@@ -62,7 +73,7 @@ export default function Popup() {
           <Icon name="settings" size={19} />
         </Button>
       </header>
-      <main className="popup-main">
+      <main className="popup-main" ref={content}>
         <div className={`capture-hero ${active ? "is-active" : ""}`}>
           <div className="capture-emblem">
             <Icon name={state.isUploading ? "sparkle" : "mic"} size={30} />
@@ -103,7 +114,7 @@ export default function Popup() {
             {t(online === null ? "connecting" : online ? "online" : "offline")}
           </span>
         </div>
-        {(error || state.captureError) && (
+        {(error || state.captureError) && !terminal && (
           <Notice kind="error">{error || state.captureError}</Notice>
         )}
         {state.isRecording && state.captureWarning && (
@@ -111,6 +122,11 @@ export default function Popup() {
         )}
         {!state.isRecording && state.currentMeetingId && (
           <section className="popup-preview">
+            {state.pipelineStatus === "FAILED" && (
+              <p className="popup-error" role="alert">
+                {error || state.captureError || t("processingFailedHelp")}
+              </p>
+            )}
             <p>
               {t(
                 state.isUploading
@@ -133,6 +149,18 @@ export default function Popup() {
             >
               {t("open")}
             </Button>
+            {state.pipelineStatus === "FAILED" && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  chrome.tabs.create({
+                    url: chrome.runtime.getURL("dashboard.html#/settings"),
+                  })
+                }
+              >
+                {t("checkModelSettings")}
+              </Button>
+            )}
           </section>
         )}
         {!active && (

@@ -77,7 +77,7 @@ class PipelineService:
             "followups": 0
         }
 
-    async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list):
+    async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list, retry_failed: bool = False):
         if not any(segment.get("text", "").strip() for segment in segments):
             message = "No speech was captured. Check microphone permission and meeting audio, or enable captions before caption capture."
             os.makedirs(meeting_dir, exist_ok=True)
@@ -115,6 +115,22 @@ class PipelineService:
                 }
             }
             
+            meeting_json_path = os.path.join(meeting_dir, "meeting.json")
+            if retry_failed and os.path.exists(meeting_json_path):
+                with open(meeting_json_path, encoding="utf-8") as source:
+                    previous = json.load(source)
+                for key, block in previous.get("ai", {}).items():
+                    if key in meeting_json["ai"] and block.get("status") == "completed":
+                        meeting_json["ai"][key] = block
+                meeting_json["meeting"]["title"] = previous.get("meeting", {}).get("title", "Generated Meeting")
+
+            def persist():
+                with open(meeting_json_path + ".tmp", "w", encoding="utf-8") as output:
+                    json.dump(meeting_json, output, indent=2)
+                os.replace(meeting_json_path + ".tmp", meeting_json_path)
+
+            persist()
+
             def log_processing(stage: str, start: float, end: float):
                 meeting_json["processing"].append({
                     "stage": stage,
@@ -126,7 +142,7 @@ class PipelineService:
             start_stage = time.time()
             
             # 2. Extract Title (Sequential)
-            title = await self.llm_service.generate_title(full_text)
+            title = meeting_json["meeting"]["title"] if retry_failed else await self.llm_service.generate_title(full_text)
             meeting_json["meeting"]["title"] = title
             self.update_meeting_metadata(meeting_id, title=title)
             log_processing("generate_title", start_stage, time.time())
@@ -136,45 +152,43 @@ class PipelineService:
             
             # Use asyncio.Semaphore to limit concurrency to 2 parallel requests to avoid free-tier rate limits
             semaphore = asyncio.Semaphore(2)
+            provider_error = None
             
-            async def run_with_sem(coro):
+            async def run_stage(key, method):
+                nonlocal provider_error
+                if meeting_json["ai"][key]["status"] == "completed":
+                    return
                 async with semaphore:
-                    return await coro
-
-            tasks = [
-                run_with_sem(self.llm_service.generate_summary(full_text)),
-                run_with_sem(self.llm_service.generate_executive_brief(full_text)),
-                run_with_sem(self.llm_service.extract_actions(full_text)),
-                run_with_sem(self.llm_service.extract_decisions(full_text)),
-                run_with_sem(self.llm_service.generate_email(full_text)),
-                run_with_sem(self.llm_service.generate_timeline(full_text)),
-                run_with_sem(self.llm_service.extract_entities(full_text)),
-                run_with_sem(self.llm_service.generate_search_index(full_text))
-            ]
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            def handle_result(result, key: str):
-                if isinstance(result, Exception):
-                    logger.error(f"Task {key} failed unexpectedly: {result}", exc_info=True)
-                    meeting_json["ai"][key] = {
-                        "status": "failed",
-                        "error": str(result),
-                        "metadata": {},
-                        "data": None
-                    }
-                else:
+                    if provider_error:
+                        meeting_json["ai"][key] = {"status": "failed", "error": provider_error, "metadata": {}, "data": None}
+                        persist()
+                        return
+                    meeting_json["ai"][key]["status"] = "processing"
+                    persist()
+                    try:
+                        result = await method(full_text)
+                    except Exception as error:
+                        result = {"status": "failed", "error": str(error).strip() or "AI request timed out. Retry processing or choose another model in Settings.", "metadata": {}, "data": None}
                     meeting_json["ai"][key] = result
-                    
-            handle_result(results[0], "summary")
-            handle_result(results[1], "executive_brief")
-            handle_result(results[2], "actions")
-            handle_result(results[3], "decisions")
-            handle_result(results[4], "email")
-            handle_result(results[5], "timeline")
-            handle_result(results[6], "entities")
-            handle_result(results[7], "search_index")
-            
+                    message = result.get("error", "") or ""
+                    if result.get("status") == "failed" and any(term in message.lower() for term in (
+                        "timed out", "connection", "api error 401", "api error 402", "api error 403", "api error 404", "api error 429", "api error 502", "api error 503"
+                    )):
+                        provider_error = message
+                    persist()
+
+            stages = {
+                "summary": self.llm_service.generate_summary,
+                "executive_brief": self.llm_service.generate_executive_brief,
+                "actions": self.llm_service.extract_actions,
+                "decisions": self.llm_service.extract_decisions,
+                "email": self.llm_service.generate_email,
+                "timeline": self.llm_service.generate_timeline,
+                "entities": self.llm_service.extract_entities,
+                "search_index": self.llm_service.generate_search_index,
+            }
+            await asyncio.gather(*(run_stage(key, method) for key, method in stages.items()))
+
             log_processing("extract_intelligence", start_stage, time.time())
             
             # Update analytics with AI results if successful
@@ -241,7 +255,7 @@ class PipelineService:
             logger.error(f"Error processing meeting {meeting_id}: {e}", exc_info=True)
             self.update_status(meeting_id, MeetingStatus.FAILED.value)
 
-    async def process_transcript(self, meeting_id: str):
+    async def process_transcript(self, meeting_id: str, retry_failed: bool = False):
         meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
         transcript_path = os.path.join(meeting_dir, "transcript.json")
         
@@ -254,7 +268,7 @@ class PipelineService:
                 data = json.load(f)
                 segments = data.get("segments", [])
                 
-            await self._process_post_transcription(meeting_id, meeting_dir, segments)
+            await self._process_post_transcription(meeting_id, meeting_dir, segments, retry_failed=retry_failed)
 
         except Exception as e:
             logger.error(f"Error processing transcript for {meeting_id}: {e}", exc_info=True)

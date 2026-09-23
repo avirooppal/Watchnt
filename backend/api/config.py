@@ -8,8 +8,14 @@ import os
 import tempfile
 
 from core.deps import get_db
+from services.providers.catalog import public_catalog
 
 router = APIRouter()
+
+@router.get("/providers")
+def get_providers():
+    return public_catalog()
+
 def _get_or_create_settings(db: Session) -> Settings:
     settings = db.query(Settings).filter(Settings.id == "default").first()
     if not settings:
@@ -28,6 +34,8 @@ def update_config(update: SettingsUpdate, db: Session = Depends(get_db)):
     settings = _get_or_create_settings(db)
     
     update_data = update.model_dump(exclude_unset=True, exclude_none=True)
+    if update_data.get("llm_provider", settings.llm_provider) != settings.llm_provider:
+        settings.cloud_text_consent = "no"
     for key, value in update_data.items():
         if key.endswith("_api_key") and "****" in value:
             continue

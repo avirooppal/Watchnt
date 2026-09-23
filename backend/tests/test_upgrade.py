@@ -163,6 +163,11 @@ def test_pipeline_preserves_success_when_one_stage_fails(monkeypatch):
     assert result['ai']['summary']['status']=='completed'
     assert result['ai']['email']['status']=='failed'
     assert result['transcript']['segments'][0]['text']=='Alex will ship'
+    pipeline.llm_service.generate_email.return_value = {'status':'completed','metadata':{},'data':{}}
+    asyncio.run(pipeline.process_transcript(meeting['id'], retry_failed=True))
+    assert client.get('/meeting/'+meeting['id']).json()['meeting']['status'] == 'COMPLETED'
+    assert pipeline.llm_service.generate_summary.await_count == 1
+    assert pipeline.llm_service.generate_email.await_count == 2
 
 @pytest.mark.parametrize('segments', [[], [{'text':'   '} ]])
 def test_empty_capture_is_failure_with_visible_reason(segments):

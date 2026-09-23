@@ -1,0 +1,23 @@
+# Only application inputs belong in the build context, never local data/secrets.
+**
+!backend/
+!backend/**
+!extension/
+!extension/**
+**/node_modules
+**/dist
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.env
+**/.env.*
+**/*.db
+**/*.db-*
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/*.log
+backend/meetings
+backend/data
+backend/models

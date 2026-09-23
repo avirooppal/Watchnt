@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
+from services.providers.catalog import NEW_CLOUD_PROVIDERS
 
 from core.logging import get_logger
 logger = get_logger(__name__)
@@ -20,7 +21,9 @@ def init_db():
     # Additive, idempotent settings upgrade; existing meetings are untouched.
     columns = {c["name"] for c in inspect(engine).get_columns("settings")}
     with engine.begin() as connection:
-        for name, default in (("transcription_language", "auto"), ("cloud_text_consent", "no")):
+        additions = [("transcription_language", "auto"), ("cloud_text_consent", "no")]
+        additions += [(f"{provider}_api_key", "") for provider in NEW_CLOUD_PROVIDERS]
+        for name, default in additions:
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE settings ADD COLUMN {name} VARCHAR DEFAULT '{default}'"))
         connection.execute(text("UPDATE settings SET transcription_provider='local'"))

@@ -6,6 +6,13 @@ import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { Notice, Skeleton } from "../components/Feedback";
 import { Input } from "../components/Input";
+type ProviderOption = {
+  id: string;
+  label: string;
+  cloud: boolean;
+  default_model: string;
+  docs_url: string;
+};
 export default function Settings({
   setup,
   onValidated,
@@ -18,6 +25,7 @@ export default function Settings({
   const { t, i18n } = useTranslation();
   const [config, setConfig] = useState<Record<string, string> | null>(null);
   const [snapshot, setSnapshot] = useState("");
+  const [providers, setProviders] = useState<ProviderOption[]>([]);
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -31,8 +39,12 @@ export default function Settings({
     Record<string, { status: string; message: string }>
   >({});
   const load = () =>
-    api("/config")
-      .then((value) => {
+    Promise.all([
+      api<Record<string, string>>("/config"),
+      api<ProviderOption[]>("/providers"),
+    ])
+      .then(([value, catalog]) => {
+        setProviders(catalog);
         setConfig(value);
         setSnapshot(JSON.stringify(value));
         setFailed(false);
@@ -50,6 +62,15 @@ export default function Settings({
     setConfig((old) => ({ ...old, [key]: value }));
   async function save(test = false) {
     if (!config) return;
+    if (
+      setup !== "speech" &&
+      !config.llm_model.trim() &&
+      !providers.find((p) => p.id === config.llm_provider)?.default_model
+    ) {
+      setFailed(true);
+      setMessage(t("modelRequired"));
+      return;
+    }
     if (
       setup !== "speech" &&
       config.llm_provider !== "ollama" &&
@@ -159,11 +180,7 @@ export default function Settings({
           <h2>{t("startBackend")}</h2>
           <p>{t("backendInstructions")}</p>
           <pre>
-            <code>
-              {
-                "powershell -ExecutionPolicy Bypass -File .\\scripts\\start_backend.ps1"
-              }
-            </code>
+            <code>{"docker compose up"}</code>
           </pre>
           <Button
             onClick={() => {
@@ -272,18 +289,20 @@ export default function Settings({
                     onChange={(e) => {
                       update("llm_provider", e.target.value);
                       update("cloud_text_consent", "no");
-                      update("llm_model", "");
+                      update(
+                        "llm_model",
+                        providers.find((p) => p.id === e.target.value)
+                          ?.default_model || "",
+                      );
+                      setResults({});
+                      setShowKey(false);
                     }}
                   >
-                    {["ollama", "groq", "openai", "gemini", "openrouter"].map(
-                      (p) => (
-                        <option key={p} value={p}>
-                          {p === "ollama"
-                            ? "Ollama · " + t("keepLocal")
-                            : p + " · " + t("cloud")}
-                        </option>
-                      ),
-                    )}
+                    {providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label + " · " + t(p.cloud ? "cloud" : "keepLocal")}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <Input
@@ -292,6 +311,19 @@ export default function Settings({
                   value={config.llm_model}
                   onChange={(e) => update("llm_model", e.target.value)}
                 />
+                <a
+                  href={
+                    providers.find((p) => p.id === config.llm_provider)
+                      ?.docs_url
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("providerDocs")}
+                </a>
+                {config.llm_provider === "ollama_cloud" && (
+                  <Notice>{t("ollamaCloudHelp")}</Notice>
+                )}
                 {config.llm_provider === "ollama" ? (
                   <Input
                     label={t("ollama")}

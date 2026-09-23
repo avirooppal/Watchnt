@@ -103,3 +103,13 @@ image copy.png
 
 # Generated local UI screenshots and verification fixtures
 artifacts/
+
+# Share only the repository's portable AI tooling.
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/caveman/
+!.agents/skills/graphify/
+!AGENTS.md
+graphify-out/

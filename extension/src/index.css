@@ -2659,3 +2659,54 @@ html.watchnt-popup .popup-main {
     padding: 20px;
   }
 }
+
+/* Keep native popup chrome visible; only the content region scrolls. */
+/* Chromium measures the document before expanding the toolbar popup. Give it
+   an intrinsic height independent of that initial, sometimes 25px viewport. */
+html.watchnt-popup,
+html.watchnt-popup body,
+html.watchnt-popup #root {
+  height: 600px;
+}
+html.watchnt-popup {
+  overflow: hidden;
+}
+html.watchnt-popup .popup-shell {
+  height: 600px;
+  max-height: min(600px, 100dvh);
+  overflow: hidden;
+}
+html.watchnt-popup .popup-main {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 0 16px 14px;
+  scrollbar-gutter: stable;
+  overflow-wrap: anywhere;
+}
+html.watchnt-popup .popup-header {
+  padding: 12px 16px;
+}
+html.watchnt-popup .has-result .capture-emblem {
+  display: none;
+}
+html.watchnt-popup .has-result .capture-hero h1 {
+  font-size: 21px;
+  line-height: 1.25;
+}
+html.watchnt-popup .popup-preview {
+  margin: 12px 0;
+  padding: 14px;
+}
+html.watchnt-popup .popup-preview .button {
+  margin-top: 10px;
+  margin-right: 6px;
+}
+html.watchnt-popup .popup-preview .popup-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+html.watchnt-popup .has-result .connection-row {
+  margin-bottom: 12px;
+}

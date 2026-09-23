@@ -1,9 +1,11 @@
 """First-run onboarding with isolated browser storage and mocked backend responses."""
-import json,time
+import json,time,sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from playwright.sync_api import sync_playwright
 root=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(root/'backend'))
+from services.providers.catalog import public_catalog
 config={'llm_provider':'ollama','llm_model':'test-model','cloud_text_consent':'no','ollama_base_url':'http://localhost:11434/api/generate','transcription_language':'auto'}
 state={'offline':True,'model_ok':False}
 with TemporaryDirectory() as profile,sync_playwright() as pw:
@@ -15,7 +17,8 @@ with TemporaryDirectory() as profile,sync_playwright() as pw:
    if path=='/config':
     if route.request.method=='POST':config.update(route.request.post_data_json)
     data=config
-   elif path=='/config/test':data={'whisper':{'status':'ok' if state['model_ok'] else 'error','message':'Speech model ready' if state['model_ok'] else 'Whisper model missing'},'ollama':{'status':'ok','message':'Model responded'}}
+   elif path=='/providers':data=public_catalog()
+   elif path=='/config/test':data={'whisper':{'status':'ok' if state['model_ok'] else 'error','message':'Speech model ready' if state['model_ok'] else 'Whisper model missing'},config['llm_provider']:{'status':'ok','message':'Model responded'}}
    elif path in ['/meetings','/folders']:data=[]
    else:data='OK'
    route.fulfill(content_type='application/json',body=json.dumps(data))
@@ -44,6 +47,15 @@ with TemporaryDirectory() as profile,sync_playwright() as pw:
   page.get_by_label('AI provider',exact=True).wait_for()
   page.reload();page.get_by_label('AI provider',exact=True).wait_for()
   assert config['transcription_language']=='es'
+  assert page.get_by_label('AI provider',exact=True).locator('option').count()==13
+  for provider in public_catalog():
+   if not provider['cloud']:continue
+   page.get_by_label('AI provider',exact=True).select_option(provider['id'])
+   assert not page.get_by_role('checkbox').is_checked()
+   assert page.get_by_label('Model name').input_value()==provider['default_model']
+   page.get_by_role('checkbox').check()
+  page.get_by_label('AI provider',exact=True).select_option('ollama_cloud')
+  page.get_by_text('Connects directly to Ollama Cloud.',exact=False).wait_for()
   page.get_by_label('AI provider',exact=True).select_option('openai')
   page.get_by_role('button',name='Save and test').click()
   page.get_by_role('alert').wait_for()
@@ -65,8 +77,21 @@ with TemporaryDirectory() as profile,sync_playwright() as pw:
   page.get_by_role('heading',name='Capture meeting').wait_for()
   assert page.get_by_role('button',name='Finish setup',exact=True).count()==0
   page.goto(f'chrome-extension://{extension_id}/dashboard.html#/settings')
+  for provider in public_catalog():
+   if not provider['cloud']:continue
+   page.get_by_label('AI provider',exact=True).select_option(provider['id'])
+   page.get_by_label('Model name').fill('account-model')
+   page.get_by_label('API key',exact=True).fill('test-key-'+provider['id'])
+   page.get_by_role('checkbox').check()
+   page.get_by_role('button',name='Test connections',exact=True).click()
+   page.get_by_text('ok · Model responded',exact=True).wait_for()
+   assert config['llm_provider']==provider['id']
+   assert config[provider['id']+'_api_key']=='test-key-'+provider['id']
+  page.reload()
+  assert page.get_by_label('AI provider',exact=True).input_value()=='xai'
+  page.get_by_role('link',name='View provider models and setup').wait_for()
   page.get_by_role('link',name='Run setup again').click()
   page.get_by_role('button',name='Check connection and continue').wait_for()
   assert not errors,errors
-  print('PASS: automatic first-run page, offline retry, microphone denial, language save, resumed step, cloud consent, failed model blocks completion, finish persistence, mobile layout, settings restart')
+  print('PASS: onboarding, offline retry, microphone denial, language save, all 13 providers, cloud consent reset, separate cloud keys and diagnostics, saved selection, failed model blocks completion, mobile layout, settings restart')
  finally:context.close()

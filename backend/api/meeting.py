@@ -82,6 +82,8 @@ def get_meeting_status(meeting_id: str, db: Session = Depends(get_db)):
         with open(path, encoding="utf-8") as source:
             saved = json.load(source)
         error = saved.get("capture_error") or next((stage.get("error") for stage in saved.get("ai", {}).values() if stage.get("error")), None)
+    if meeting.status == "FAILED" and not error:
+        error = "AI processing did not finish. Your saved transcript is available in the meeting. Check the selected model in Settings, then retry processing."
     return {"status": meeting.status, "job_id": meeting.job_id, "error": error}
 
 
@@ -160,11 +162,15 @@ def retry_meeting(meeting_id: str, background_tasks: BackgroundTasks, db: Sessio
         
     if meeting.status not in {MeetingStatus.COMPLETED.value, MeetingStatus.FAILED.value}:
         raise HTTPException(409, "Meeting is already processing")
+    retry_failed = meeting.status == MeetingStatus.FAILED.value
     meeting.status = MeetingStatus.TRANSCRIBING.value
     db.commit()
     
     has_transcript = os.path.exists(os.path.join(MEETINGS_DIR, meeting_id, "transcript.json"))
-    background_tasks.add_task(pipeline_service.process_transcript if has_transcript else pipeline_service.process_meeting, meeting_id)
+    if has_transcript:
+        background_tasks.add_task(pipeline_service.process_transcript, meeting_id, retry_failed=retry_failed)
+    else:
+        background_tasks.add_task(pipeline_service.process_meeting, meeting_id)
     return {"status": "retrying"}
 
 @router.post("/meeting/{meeting_id}/chat")
