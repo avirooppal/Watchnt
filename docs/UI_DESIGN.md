@@ -5,7 +5,7 @@ The extension uses one local stylesheet (`extension/src/index.css`) and shared R
 - Tailwind v4 theme tokens define colors, a 4 px spacing base, typography, radii, and shadows. CSS variables carry the same tokens into the meeting controller's isolated Shadow DOM.
 - Shared Button, Input, Icon/Brand, Notice, Skeleton, EmptyState, Dialog, and StatusPill components keep focus, pending, disabled, error, and empty states consistent.
 - The popup shows connection state, source selection, recording time, live preview, and a clear explanation when capture is unavailable. The controller shares these patterns in a compact dark surface.
-- Library, folders, task filters, meeting sections, chat, and provider settings use responsive layouts. Settings retain all five providers and explicit cloud text consent.
+- Library, folders, task filters, meeting sections, chat, and provider settings use responsive layouts. Settings offer local Ollama and twelve cloud providers with explicit cloud text consent.
 - Native modal dialogs replace browser prompts for rename/delete. Tabs support arrow keys, Home, and End; dialogs support Escape and focus restoration. Reduced-motion preferences disable transitions and animations.
 - Async updates preserve existing content, prevent duplicate submission, and roll back failed task writes. Polls pause in hidden documents. Screen-reader labels and English/Spanish copy are shared.
 
