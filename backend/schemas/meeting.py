@@ -1,6 +1,6 @@
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 class MeetingCreate(BaseModel):
     title: str
@@ -33,3 +33,6 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
+
+class AnalysisRequest(BaseModel):
+    outputs: list[Literal["executive_brief", "summary", "actions", "decisions", "timeline", "entities", "email", "transcript"]] = Field(min_length=1, max_length=8)

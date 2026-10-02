@@ -88,6 +88,23 @@ def test_stream_rejects_bad_format():
         socket.send_json({'sampleRate':48000,'channels':1})
         with pytest.raises(WebSocketDisconnect):socket.receive_json()
 
+def test_system_audio_and_microphone_have_independent_signal(monkeypatch):
+    class Fake:
+        def transcribe(self, audio):
+            return [{"start":0.,"end":len(audio)/16000,"text":"speech","confidence":.8}]
+    monkeypatch.setattr(TranscriptionProviderFactory, 'create', lambda _: Fake())
+    with client.websocket_connect('/ws/transcribe',headers={'origin':'chrome-extension://test'}) as socket:
+        socket.send_json({'sampleRate':16000,'channels':2,'audioSource':'system'})
+        assert socket.receive_json()['ready']
+        packet = np.zeros((16000,2),dtype='<f4')
+        packet[:,0] = .1
+        socket.send_bytes(packet.tobytes())
+        assert [s['speaker'] for s in socket.receive_json()['segments']] == ['Meeting audio']
+        packet[:,0] = 0
+        packet[:,1] = .1
+        socket.send_bytes(packet.tobytes())
+        assert [s['speaker'] for s in socket.receive_json()['segments']] == ['Me']
+
 def test_stream_rejects_remote_origin():
     from starlette.websockets import WebSocketDisconnect
     with pytest.raises(WebSocketDisconnect):
@@ -157,7 +174,7 @@ def test_pipeline_preserves_success_when_one_stage_fails(monkeypatch):
         value=[] if name in {'extract_actions','extract_decisions','generate_timeline','generate_search_index'} else {}
         monkeypatch.setattr(pipeline.llm_service,name,AsyncMock(return_value={'status':'completed','metadata':{},'data':value}))
     monkeypatch.setattr(pipeline.llm_service,'generate_email',AsyncMock(return_value={'status':'failed','data':None,'error':'Malformed output'}))
-    asyncio.run(pipeline.process_transcript(meeting['id']))
+    asyncio.run(pipeline.process_transcript(meeting['id'], outputs=['summary','email']))
     result=client.get('/meeting/'+meeting['id']).json()
     assert result['meeting']['status']=='FAILED'
     assert result['ai']['summary']['status']=='completed'

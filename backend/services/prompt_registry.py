@@ -195,6 +195,17 @@ Transcript:
     ),
 }
 
+class TranscriptText(BaseModel):
+    text: str
+
+
+PROMPTS["transcript"] = PromptDefinition(
+    name="Transcript cleanup", version="v1.0", description="Optional readable transcript",
+    template="Improve punctuation and paragraph breaks without adding, removing, translating, or changing spoken meaning. Preserve speaker labels and timestamps. Return JSON with a text field.\nTranscript:\n{transcript}",
+    expected_schema=TranscriptText, compatible_providers=["all"],
+)
+CHAT_PROMPT = "Answer questions using only the meeting transcript. Cite speakers or timestamps where available. Say when the transcript does not contain the answer."
+
 class PromptRegistry:
     @staticmethod
     def get(key: str) -> PromptDefinition:

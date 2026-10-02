@@ -8,10 +8,11 @@
 
 ## Overview
 
-WatchNT captures meeting-tab audio or live captions from Google Meet, Zoom Web, and Microsoft Teams Web. Speech recognition runs locally with Whisper. Use local Ollama for AI processing, or connect a cloud provider with your own API key and explicit text-processing consent.
+WatchNT records the visible meeting tab and its audio in Google Meet, Zoom Web, and Microsoft Teams Web. Speech recognition runs locally with Whisper. Use local Ollama for AI processing, or connect a cloud provider with your own API key and explicit text-processing consent.
 
-- **Capture:** meeting audio, optional microphone input, live transcript preview, and a separate captions mode.
-- **Review:** briefs, summaries, action items, decisions, timelines, entities, and follow-up email drafts.
+- **Capture:** Start capture records the meeting-tab video, meeting audio, your microphone, and audio from presentations shared by the meeting page, while transcribing speech live. Presentations and shared screens are recorded as shown in the meeting tab.
+- **Generate only what you need:** choose briefs, summaries, action items, decisions, timelines, entities, follow-up email drafts, or optional transcript cleanup after recording.
+- **Customize:** edit each output prompt in Settings; ask meeting questions on demand.
 - **Organize:** a local meeting library, folders, transcript search, and persistent action-item completion.
 - **Export:** JSON meeting data, Markdown sections, and CSV action items.
 - **Recover:** saved transcripts, incremental AI results, and retries for failed sections.
@@ -78,13 +79,25 @@ Fresh installations use Whisper `base` and Ollama `qwen3:1.7b` on CPU. Models an
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. Select **Load unpacked** and choose `Watchnt/extension/dist`.
 3. Pin WatchNT, open its toolbar popup, and complete setup.
-4. Allow microphone access if you want your own voice included alongside meeting-tab audio.
+4. Allow microphone access to include your voice; recording setup will request it if needed.
 
 After a rebuild, click **Reload** on the installed extension. Docker builds the extension but cannot install or reload it in your browser.
 
 ### 3. Capture a meeting
 
-Open a supported meeting tab and start capture from the **extension toolbar popup**. Choose local audio transcription, or enable the meeting platform's captions before using captions mode. Stop from the popup or floating controller, then open the meeting to review and export results.
+WatchNT keeps recording controls in the toolbar, with no in-meeting reminder overlay. Click **Start capture** in its toolbar popup. The browser recorder captures the original meeting tab and continues when you switch tabs or close the popup. Your microphone uses the meeting website's permission; allow it once if prompted. **Stop & save** finalizes the video and original transcript. Select **Open meeting**, choose your outputs, and click **Generate selected**. No AI notes or titles are generated automatically. No Windows recorder or desktop screen picker is used for new recordings.
+
+Browser capture uses the extension service worker to start `tabCapture`, an offscreen document for recording, and a local WebRTC connection for microphone and outgoing presentation audio. A document-start hook observes media the meeting page obtains through its normal `getDisplayMedia` request; WatchNT does not open its own screen picker. Audio is connected only after Start. Stop closes WatchNT's microphone/connection without stopping the meeting's shared presentation. Reload existing meeting tabs once after installing or updating the extension so the hook is present before presenting.
+
+Scope: the saved video is the visible meeting tab. Hidden camera tiles and slides are not separately captured. Outgoing presentation audio requires the meeting page to obtain an audio track when you share; enable audio in the meeting's own presentation control. Unshared audio from unrelated tabs or desktop apps is outside this browser meeting capture. Live provider compatibility still requires testing on Meet, Zoom, and Teams; the automated fixture verifies actual tab capture, local WebRTC, transcription, and recording.
+
+### 4. Choose outputs and customize prompts
+
+Stopping a recording saves the original transcript without requesting AI notes or an AI title. Open the meeting, select the outputs you need, and click **Generate selected**. Existing outputs remain available; selecting a generated output explicitly regenerates it. **Ask this meeting** runs only when a question is submitted. Optional **Transcript cleanup** creates a separate readable version and never replaces the original transcript.
+
+In **Settings → Output prompts**, expand a section to edit its instructions or restore the default. Prompts apply to future requests, including regeneration. `{transcript}` inserts the original evidence; evidence is appended if the placeholder is omitted. Structured output validation remains enabled. **Advanced settings** contains the local speech model and recording recovery controls.
+
+After updating, restart the backend to apply the additive settings migration and reload the extension.
 
 ## AI providers
 
@@ -102,7 +115,7 @@ Each provider links to its model documentation. Switching providers resets conse
 
 ## Architecture
 
-The extension streams audio to the local API for transcription. Saved transcript text passes through the selected LLM provider for schema-validated extraction. SQLite stores settings and meeting metadata; local files store transcripts and generated artifacts.
+The extension streams audio to the local API for transcription. Only explicitly requested outputs send saved transcript text through the selected LLM provider for schema-validated extraction. SQLite stores settings and meeting metadata; local files store WebM recordings, transcripts, and generated artifacts. Video is saved incrementally while capture runs.
 
 | Component | Implementation |
 | --- | --- |
@@ -122,6 +135,7 @@ backend/
 extension/
   src/          Popup, dashboard, capture, and background worker
   dist/         Generated unpacked extension
+companion/      Legacy Windows recorder and recovery support (optional)
 scripts/        Browser and integration checks
 docs/           Development, operations, and architecture notes
 docker-compose.yml
@@ -129,7 +143,7 @@ docker-compose.yml
 
 ## Privacy and storage
 
-- Audio transcription runs locally. The live capture path processes audio in memory and does not archive it.
+- Audio transcription runs locally. Video and mixed audio are saved locally as WebM recordings. Received chunks are retained if saving is interrupted; incomplete recordings may require recovery. Deleting a meeting also deletes its recording.
 - Local Ollama keeps AI processing on your machine. A selected cloud provider receives transcript text for requested AI features after consent.
 - API keys remain in the local backend and are masked in settings responses. Stored keys and meeting data are not encrypted at rest.
 - Docker persists settings in `data/watchnt.db`, artifacts in `meetings/`, and model weights in named volumes.
@@ -149,7 +163,17 @@ npm run build --prefix extension
 npm run lint --prefix extension
 ```
 
-Backend tests isolate databases and meeting files. Browser checks cover onboarding, capture states, recovery, accessibility, and actual toolbar-popup sizing. Cloud protocol tests use simulated responses; passing them does not establish live provider availability.
+Backend tests isolate databases and meeting files. Selection tests verify zero AI calls on save, generation of selected outputs only, prompt persistence, and preservation of the original transcript. Browser checks cover onboarding, capture states, recovery, accessibility, and actual toolbar-popup sizing. Cloud protocol tests use simulated responses; passing them does not establish live provider availability.
+
+Useful browser checks (require Python Playwright and its Chromium runtime):
+
+```sh
+python scripts/ui_smoke.py
+python scripts/popup_recovery_smoke.py
+python scripts/toolbar_smoke.py
+```
+
+Generated builds, browser screenshots, meeting data, credentials, model weights, and local recorder recovery files are excluded from Git. Keep these files local; `.gitignore` does not remove files already tracked by Git.
 
 ## Documentation
 

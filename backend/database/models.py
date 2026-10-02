@@ -54,3 +54,11 @@ class Settings(Base):
     xai_api_key = Column(String, default="")
     summary_prompt_template = Column(String, default="")
     email_prompt_template = Column(String, default="")
+
+    executive_brief_prompt_template = Column(String, default="")
+    actions_prompt_template = Column(String, default="")
+    decisions_prompt_template = Column(String, default="")
+    timeline_prompt_template = Column(String, default="")
+    entities_prompt_template = Column(String, default="")
+    transcript_prompt_template = Column(String, default="")
+    chat_prompt_template = Column(String, default="")

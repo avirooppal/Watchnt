@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from database.db import SessionLocal
 from database.models import Meeting
-from schemas.meeting import MeetingCreate, MeetingResponse, MeetingUpdate, ChatRequest
+from schemas.meeting import MeetingCreate, MeetingResponse, MeetingUpdate, ChatRequest, AnalysisRequest
 from core.deps import get_db, validate_meeting_id
 from core.paths import MEETINGS_DIR
 from services.pipeline_service import PipelineService
@@ -66,6 +66,7 @@ def get_meeting_details(meeting_id: str, db: Session = Depends(get_db)):
             data["transcript"] = json.load(f)
                 
     actions = data.get("ai", {}).get("actions", {})
+    data["recording_available"] = os.path.isfile(os.path.join(meeting_dir, "recording.webm"))
     if isinstance(actions.get("data"), list):
         actions["data"] = apply_reviews(meeting_id, actions["data"])
     return data
@@ -191,3 +192,19 @@ async def chat_with_meeting(meeting_id: str, request: ChatRequest, db: Session =
     messages_list = [{"role": m.role, "content": m.content} for m in request.messages]
     response_text = await llm_service.chat_with_meeting(segments, messages_list)
     return {"response": response_text}
+
+@router.post("/meeting/{meeting_id}/analyze")
+def analyze_meeting(meeting_id: str, request: AnalysisRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    meeting_id = validate_meeting_id(meeting_id)
+    # Claim the job atomically so double clicks cannot launch duplicate paid requests.
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(404, "Meeting not found")
+    if not os.path.isfile(os.path.join(MEETINGS_DIR, meeting_id, "transcript.json")):
+        raise HTTPException(400, "Save a transcript before generating outputs")
+    claimed = db.query(Meeting).filter(Meeting.id == meeting_id, Meeting.status.in_(["COMPLETED", "FAILED"])).update({"status": MeetingStatus.EXTRACTING_INTELLIGENCE.value})
+    if not claimed:
+        raise HTTPException(409, "Meeting is already processing")
+    db.commit()
+    background_tasks.add_task(pipeline_service.process_transcript, meeting_id, outputs=request.outputs)
+    return {"status": "processing", "outputs": request.outputs}

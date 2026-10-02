@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 export interface CaptureState {
   onboardingCompleted?: boolean;
   currentMeetingId?: string;
+  dismissedCaptureId?: string;
   captureWarning?: string;
+  isStarting?: boolean;
   isRecording?: boolean;
   isUploading?: boolean;
   recordingStartTime?: number;
@@ -15,7 +17,9 @@ export interface CaptureState {
 const keys = [
   "onboardingCompleted",
   "currentMeetingId",
+  "dismissedCaptureId",
   "captureWarning",
+  "isStarting",
   "isRecording",
   "isUploading",
   "recordingStartTime",

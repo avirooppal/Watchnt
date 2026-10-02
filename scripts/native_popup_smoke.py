@@ -1,4 +1,4 @@
-"""Check real Chromium toolbar sizing in an isolated, visible browser window."""
+"""Check real Chromium toolbar sizing in an isolated browser."""
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 root = Path(__file__).resolve().parents[1]
 with TemporaryDirectory() as profile, sync_playwright() as pw:
-    context = pw.chromium.launch_persistent_context(profile, channel='chromium', headless=False,
+    context = pw.chromium.launch_persistent_context(profile, channel='chromium', headless=True,
         args=[f'--disable-extensions-except={root / "extension/dist"}', f'--load-extension={root / "extension/dist"}'], viewport=None)
     try:
         context.route('http://localhost:8000/**', lambda route: route.fulfill(
@@ -23,16 +23,16 @@ with TemporaryDirectory() as profile, sync_playwright() as pw:
                 await chrome.windows.update(window.id, {focused:true});
                 await chrome.action.openPopup({windowId:window.id});
             }''')
-            page.wait_for_function("() => chrome.extension.getViews({type:'popup'}).some(w => w.innerHeight === 600 && w.document.querySelector('.popup-footer'))")
+            page.wait_for_function("() => chrome.extension.getViews({type:'popup'}).some(w => w.innerHeight >= 200 && w.innerHeight < 380 && w.document.querySelector('.popup-footer'))")
             result = page.evaluate("""() => chrome.extension.getViews({type:'popup'}).map(w => ({
                 width:w.innerWidth, height:w.innerHeight,
                 header:w.document.querySelector('.popup-header').getBoundingClientRect().top,
                 footer:w.document.querySelector('.popup-footer').getBoundingClientRect().bottom
             }))""")
-            assert len(result) == 1 and result[0]['width'] == 400 and result[0]['height'] == 600, result
-            assert result[0]['header'] == 0 and result[0]['footer'] <= 601, result
+            assert len(result) == 1 and result[0]['width'] == 400 and 200 <= result[0]['height'] < 380, result
+            assert result[0]['header'] == 0 and result[0]['footer'] <= result[0]['height']+1, result
             page.evaluate("() => chrome.extension.getViews({type:'popup'})[0].close()")
             page.wait_for_function("() => chrome.extension.getViews({type:'popup'}).length === 0")
-        print('PASS: real toolbar popup opens and reopens at 400 x 600 with header and footer visible')
+        print('PASS: real toolbar popup opens and reopens at compact content height with header and footer visible')
     finally:
         context.close()

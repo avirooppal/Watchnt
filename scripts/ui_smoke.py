@@ -15,22 +15,21 @@ import urllib.request
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+with socket.socket() as port:
+    port.bind(('127.0.0.1', 0))
+    TEST_API = 'http://127.0.0.1:' + str(port.getsockname()[1])
 
 def request(path, body=None, method=None):
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request('http://localhost:8000'+path, data=data, headers={'Content-Type':'application/json'}, method=method)
+    req = urllib.request.Request(TEST_API+path, data=data, headers={'Content-Type':'application/json'}, method=method)
     with urllib.request.urlopen(req, timeout=5) as response:
         return json.load(response)
-
-with socket.socket() as check:
-    if check.connect_ex(('127.0.0.1',8000)) == 0:
-        raise SystemExit('Port 8000 is occupied; stop that service before this isolated smoke test.')
 
 with tempfile.TemporaryDirectory(prefix='watchnt-ui-') as directory:
     folder = Path(directory)
     env = {**os.environ, 'DATABASE_URL':'sqlite:///'+(folder/'test.db').as_posix(), 'MEETINGS_DIR':str(folder/'meetings')}
     log = open(folder/'backend.log','w')
-    server = subprocess.Popen([sys.executable,'-m','uvicorn','main:app','--host','127.0.0.1','--port','8000'],cwd=ROOT/'backend',env=env,stdout=log,stderr=log)
+    server = subprocess.Popen([sys.executable,'-m','uvicorn','main:app','--host','127.0.0.1','--port',TEST_API.rsplit(':',1)[1]],cwd=ROOT/'backend',env=env,stdout=log,stderr=log)
     try:
         for _ in range(100):
             try: request('/health'); break
@@ -46,6 +45,7 @@ with tempfile.TemporaryDirectory(prefix='watchnt-ui-') as directory:
             extension=str(ROOT/'extension'/'dist')
             context=pw.chromium.launch_persistent_context(str(folder/'browser'),channel='chromium',headless=True,args=[f'--disable-extensions-except={extension}',f'--load-extension={extension}', '--autoplay-policy=no-user-gesture-required'],viewport={'width':1440,'height':1000})
             try:
+                context.route('http://localhost:8000/**', lambda route: route.continue_(url=route.request.url.replace('http://localhost:8000', TEST_API, 1)))
                 worker=context.service_workers[0] if context.service_workers else context.wait_for_event('serviceworker')
                 extension_id=worker.url.split('/')[2]
                 page=context.new_page()
@@ -92,6 +92,18 @@ with tempfile.TemporaryDirectory(prefix='watchnt-ui-') as directory:
                 page.screenshot(animations="disabled",path=str(screenshots/'actions.png'),full_page=True)
                 accessibility('actions')
                 page.get_by_role('link',name='Website launch review').click()
+                page.get_by_role('heading',name='What do you need from this meeting?').wait_for()
+                assert page.get_by_role('button',name='Generate selected (0)',exact=True).is_disabled()
+                generated=[]
+                def selected_analysis(route):
+                    generated.append(route.request.post_data_json)
+                    route.fulfill(status=200,content_type='application/json',body='{"status":"processing"}')
+                page.route('**/meeting/*/analyze',selected_analysis)
+                page.locator('.output-picker').get_by_role('checkbox',name='Summary',exact=False).check()
+                page.get_by_role('button',name='Generate selected (1)',exact=True).click()
+                page.get_by_role('button',name='Generate selected (0)',exact=True).wait_for()
+                assert generated==[{'outputs':['summary']}]
+                page.unroute('**/meeting/*/analyze')
                 page.get_by_role('tab',name='Summary',exact=True).click()
                 page.get_by_text('We agreed to launch on Friday.').wait_for()
                 page.screenshot(animations="disabled",path=str(screenshots/'detail.png'),full_page=True)
@@ -152,6 +164,18 @@ with tempfile.TemporaryDirectory(prefix='watchnt-ui-') as directory:
                 page.get_by_role('button',name='Try again',exact=True).click()
                 page.get_by_label('Spoken language').select_option('hi')
                 assert not page.get_by_role('alert').count()
+                prompt=page.locator('.prompt-editor').filter(has=page.get_by_text('Executive brief',exact=True))
+                prompt.locator('summary').click()
+                prompt.get_by_role('textbox').fill('Focus on launch risks. {transcript}')
+                page.get_by_role('button',name='Save changes',exact=True).click()
+                page.get_by_text('Saved',exact=True).wait_for()
+                assert request('/config')['executive_brief_prompt_template']=='Focus on launch risks. {transcript}'
+                page.reload()
+                prompt.locator('summary').click()
+                assert prompt.get_by_role('textbox').input_value()=='Focus on launch risks. {transcript}'
+                prompt.get_by_role('button',name='Restore default').click()
+                page.get_by_text('Advanced settings',exact=True).click()
+                page.get_by_label('Local speech model',exact=False).select_option('base')
                 accessibility('settings')
                 page.screenshot(animations="disabled",path=str(screenshots/'settings.png'),full_page=True)
                 page.get_by_role('button',name='Save changes').click()
@@ -186,6 +210,7 @@ with tempfile.TemporaryDirectory(prefix='watchnt-ui-') as directory:
                 assert page.locator('.popup-shell').bounding_box()['height'] <= 600
                 accessibility('popup')
                 page.evaluate("chrome.storage.local.set({isRecording:true,recordingStartTime:Date.now()-65000,liveTranscript:'Alex will send the release notes on Friday.',liveConfidence:.88})")
+                page.locator('.popup-live-preview summary').click()
                 page.get_by_text('Alex will send the release notes on Friday.').wait_for()
                 page.locator('.popup-shell').screenshot(animations="disabled",path=str(screenshots/'popup-recording.png'))
                 accessibility('popup recording')

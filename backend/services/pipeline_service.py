@@ -77,7 +77,7 @@ class PipelineService:
             "followups": 0
         }
 
-    async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list, retry_failed: bool = False):
+    async def _process_post_transcription(self, meeting_id: str, meeting_dir: str, segments: list, retry_failed: bool = False, outputs: list[str] | None = None):
         if not any(segment.get("text", "").strip() for segment in segments):
             message = "No speech was captured. Check microphone permission and meeting audio, or enable captions before caption capture."
             os.makedirs(meeting_dir, exist_ok=True)
@@ -116,13 +116,21 @@ class PipelineService:
             }
             
             meeting_json_path = os.path.join(meeting_dir, "meeting.json")
-            if retry_failed and os.path.exists(meeting_json_path):
+            meeting_json["ai"]["transcript"] = {"status": "skipped", "metadata": {}, "data": None}
+            selected = set(outputs or [])
+            if os.path.exists(meeting_json_path):
                 with open(meeting_json_path, encoding="utf-8") as source:
                     previous = json.load(source)
+                if retry_failed and outputs is None:
+                    selected = {key for key, block in previous.get("ai", {}).items() if block.get("status") == "failed"}
                 for key, block in previous.get("ai", {}).items():
-                    if key in meeting_json["ai"] and block.get("status") == "completed":
+                    if key in meeting_json["ai"] and key not in selected:
                         meeting_json["ai"][key] = block
                 meeting_json["meeting"]["title"] = previous.get("meeting", {}).get("title", "Generated Meeting")
+
+            for key, block in meeting_json["ai"].items():
+                if key not in selected and block["status"] == "pending":
+                    block["status"] = "skipped"
 
             def persist():
                 with open(meeting_json_path + ".tmp", "w", encoding="utf-8") as output:
@@ -141,11 +149,19 @@ class PipelineService:
 
             start_stage = time.time()
             
-            # 2. Extract Title (Sequential)
-            title = meeting_json["meeting"]["title"] if retry_failed else await self.llm_service.generate_title(full_text)
+            # Preserve the existing user/meeting title; no hidden title-generation call.
+            db = SessionLocal()
+            try:
+                meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+                title = meeting.title if meeting else "Meeting"
+            finally:
+                db.close()
             meeting_json["meeting"]["title"] = title
-            self.update_meeting_metadata(meeting_id, title=title)
-            log_processing("generate_title", start_stage, time.time())
+            self.update_meeting_metadata(meeting_id, title=title,
+                duration_minutes=str(meeting_json["analytics"]["duration_minutes"]),
+                word_count=str(meeting_json["analytics"]["words"]),
+                speaker_count=str(meeting_json["analytics"]["speakers"]))
+            log_processing("save_metadata", start_stage, time.time())
             
             # 3. Parallel AI Extraction Tasks
             start_stage = time.time()
@@ -185,9 +201,10 @@ class PipelineService:
                 "email": self.llm_service.generate_email,
                 "timeline": self.llm_service.generate_timeline,
                 "entities": self.llm_service.extract_entities,
+                "transcript": self.llm_service.generate_transcript,
                 "search_index": self.llm_service.generate_search_index,
             }
-            await asyncio.gather(*(run_stage(key, method) for key, method in stages.items()))
+            await asyncio.gather(*(run_stage(key, method) for key, method in stages.items() if key in selected))
 
             log_processing("extract_intelligence", start_stage, time.time())
             
@@ -255,7 +272,7 @@ class PipelineService:
             logger.error(f"Error processing meeting {meeting_id}: {e}", exc_info=True)
             self.update_status(meeting_id, MeetingStatus.FAILED.value)
 
-    async def process_transcript(self, meeting_id: str, retry_failed: bool = False):
+    async def process_transcript(self, meeting_id: str, retry_failed: bool = False, outputs: list[str] | None = None):
         meeting_dir = os.path.join(MEETINGS_DIR, meeting_id)
         transcript_path = os.path.join(meeting_dir, "transcript.json")
         
@@ -268,7 +285,7 @@ class PipelineService:
                 data = json.load(f)
                 segments = data.get("segments", [])
                 
-            await self._process_post_transcription(meeting_id, meeting_dir, segments, retry_failed=retry_failed)
+            await self._process_post_transcription(meeting_id, meeting_dir, segments, retry_failed=retry_failed, outputs=outputs)
 
         except Exception as e:
             logger.error(f"Error processing transcript for {meeting_id}: {e}", exc_info=True)
