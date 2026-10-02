@@ -43,3 +43,6 @@ brag-output/
 *.jpeg
 *.svg
 *.webp
+
+# Preserved generated build outputs.
+dist.root-owned-backup*/
