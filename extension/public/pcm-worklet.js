@@ -14,7 +14,16 @@ class PCMWindow extends AudioWorkletProcessor {
   flush() {
     if (this.cursor) {
       const data = this.buffer.slice(0, this.cursor);
-      this.port.postMessage({ pcm: data.buffer }, [data.buffer]);
+      const levels = Array(this.channels).fill(0);
+      for (let i = 0; i < data.length; i++)
+        levels[i % this.channels] = Math.max(
+          levels[i % this.channels],
+          Math.abs(data[i]),
+        );
+      this.port.postMessage(
+        { pcm: data.buffer, levels, frames: this.cursor / this.channels },
+        [data.buffer],
+      );
       this.cursor = 0;
     }
   }

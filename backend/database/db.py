@@ -23,6 +23,7 @@ def init_db():
     with engine.begin() as connection:
         additions = [("transcription_language", "auto"), ("cloud_text_consent", "no")]
         additions += [(f"{provider}_api_key", "") for provider in NEW_CLOUD_PROVIDERS]
+        additions += [(f"{key}_prompt_template", "") for key in ["executive_brief", "actions", "decisions", "timeline", "entities", "transcript", "chat"]]
         for name, default in additions:
             if name not in columns:
                 connection.execute(text(f"ALTER TABLE settings ADD COLUMN {name} VARCHAR DEFAULT '{default}'"))

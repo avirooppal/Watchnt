@@ -18,6 +18,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         config = await asyncio.wait_for(websocket.receive_json(), 10)
         channels = config.get("channels", 1)
+        meeting_speaker = "Meeting audio" if config.get("audioSource") == "system" else "Others"
         if channels not in (1, 2) or config.get("sampleRate") != 16000:
             await websocket.close(code=1008, reason="Expected 16 kHz PCM, one or two channels")
             return
@@ -42,7 +43,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     for segment in provider.transcribe(audio):
                         segment["start"] += offset
                         segment["end"] += offset
-                        segment["speaker"] = ("Others" if channel == 0 else "Me") if channels == 2 else "Unknown"
+                        segment["speaker"] = (meeting_speaker if channel == 0 else "Me") if channels == 2 else "Unknown"
                         results.append(segment)
                 return sorted(results, key=lambda item: item["start"])
             segments = await asyncio.to_thread(infer)

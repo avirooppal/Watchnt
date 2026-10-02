@@ -28,6 +28,21 @@ class SettingsUpdate(BaseModel):
     summary_prompt_template: str | None = None
     email_prompt_template: str | None = None
 
+    executive_brief_prompt_template: str | None = None
+    actions_prompt_template: str | None = None
+    decisions_prompt_template: str | None = None
+    timeline_prompt_template: str | None = None
+    entities_prompt_template: str | None = None
+    transcript_prompt_template: str | None = None
+    chat_prompt_template: str | None = None
+
+    @field_validator("executive_brief_prompt_template", "actions_prompt_template", "decisions_prompt_template", "timeline_prompt_template", "entities_prompt_template", "transcript_prompt_template", "chat_prompt_template", "summary_prompt_template", "email_prompt_template")
+    @classmethod
+    def prompt_length(cls, value):
+        if value is not None and len(value) > 12000:
+            raise ValueError("Prompt must be at most 12000 characters")
+        return value
+
     @field_validator("llm_provider")
     @classmethod
     def provider(cls, value):
@@ -80,6 +95,14 @@ class SettingsResponse(BaseModel):
     xai_api_key: str = ""
     summary_prompt_template: str
     email_prompt_template: str
+
+    executive_brief_prompt_template: str = ""
+    actions_prompt_template: str = ""
+    decisions_prompt_template: str = ""
+    timeline_prompt_template: str = ""
+    entities_prompt_template: str = ""
+    transcript_prompt_template: str = ""
+    chat_prompt_template: str = ""
 
     model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 

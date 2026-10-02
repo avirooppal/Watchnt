@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from database.db import SessionLocal
 from database.models import Settings
 from services.providers.llm_factory import LLMProviderFactory
-from services.prompt_registry import PromptRegistry
+from services.prompt_registry import PromptRegistry, CHAT_PROMPT
 
 from core.logging import get_logger
 logger = get_logger(__name__)
@@ -80,7 +80,10 @@ class LLMService:
         start_time = time.time()
         
         prompt_def = PromptRegistry.get(key)
-        prompt_text = LANGUAGE_INSTRUCTION + prompt_def.template.format(transcript=transcript_text)
+        template = getattr(self._get_settings(), key + "_prompt_template", "") or prompt_def.template
+        prompt_text = LANGUAGE_INSTRUCTION + template.replace("{transcript}", transcript_text)
+        if "{transcript}" not in template:
+            prompt_text += "\n\nTranscript:\n" + transcript_text
         
         # Inject exact JSON schema instructions if applicable
         if prompt_def.expected_schema:
@@ -171,6 +174,9 @@ class LLMService:
     async def extract_entities(self, transcript_text: str) -> Dict[str, Any]:
         return await self._execute_prompt("entities", transcript_text)
 
+    async def generate_transcript(self, transcript_text: str) -> Dict[str, Any]:
+        return await self._execute_prompt("transcript", transcript_text)
+
     async def generate_search_index(self, transcript_text: str) -> Dict[str, Any]:
         return await self._execute_prompt("search_index", transcript_text)
 
@@ -178,7 +184,11 @@ class LLMService:
         full_text = "\n".join([f"[{seg.get('speaker', 'All')}]: {seg['text']}" for seg in transcript_segments])
         
         # Build prompt from conversation history
-        prompt = LANGUAGE_INSTRUCTION + f"You are an AI assistant answering questions about the following meeting transcript.\n\nTranscript:\n{full_text}\n\nConversation History:\n"
+        instructions = getattr(self._get_settings(), "chat_prompt_template", "") or CHAT_PROMPT
+        prompt = LANGUAGE_INSTRUCTION + instructions.replace("{transcript}", full_text)
+        if "{transcript}" not in instructions:
+            prompt += "\n\nTranscript:\n" + full_text
+        prompt += "\n\nConversation History:\n"
         for msg in messages:
             role = "User" if msg["role"] == "user" else "Assistant"
             prompt += f"{role}: {msg['content']}\n"

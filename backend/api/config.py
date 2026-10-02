@@ -67,3 +67,8 @@ async def test_config(db: Session = Depends(get_db)):
     except Exception as error:
         results[settings.llm_provider] = {"status": "error", "message": str(error) or "Model response timed out. Check the model is loaded and try again."}
     return results
+
+@router.get("/prompts")
+def get_prompts():
+    from services.prompt_registry import PROMPTS, CHAT_PROMPT
+    return {**{key: PROMPTS[key].template for key in ["executive_brief", "summary", "actions", "decisions", "timeline", "entities", "transcript", "email"]}, "chat": CHAT_PROMPT}

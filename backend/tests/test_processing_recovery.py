@@ -79,7 +79,8 @@ def test_provider_outage_stops_queued_sections(monkeypatch, tmp_path):
     failure = AsyncMock(return_value={'status':'failed','error':'openrouter timed out. Your transcript is saved.','metadata':{},'data':None})
     for name in ('generate_summary','generate_executive_brief','extract_actions','extract_decisions','generate_email','generate_timeline','extract_entities','generate_search_index'):
         monkeypatch.setattr(pipeline.llm_service, name, failure)
-    asyncio.run(pipeline._process_post_transcription('synthetic', str(tmp_path), [{'text':'Synthetic meeting'}]))
+    asyncio.run(pipeline._process_post_transcription('synthetic', str(tmp_path), [{'text':'Synthetic meeting'}], outputs=['summary', 'email', 'actions']))
     assert failure.await_count <= 2
     saved = json.loads((tmp_path/'meeting.json').read_text())
-    assert all(block['status']=='failed' and block['error'] for block in saved['ai'].values())
+    assert all(saved['ai'][key]['status']=='failed' and saved['ai'][key]['error'] for key in ['summary','email','actions'])
+    assert saved['ai']['entities']['status'] == 'skipped'

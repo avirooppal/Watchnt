@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, json } from "../services/api";
@@ -23,11 +23,17 @@ export default function Settings({
   onBusyChange?: (busy: boolean) => void;
 } = {}) {
   const { t, i18n } = useTranslation();
+  const location = useLocation();
   const [config, setConfig] = useState<Record<string, string> | null>(null);
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
   const [snapshot, setSnapshot] = useState("");
   const [providers, setProviders] = useState<ProviderOption[]>([]);
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!loading && location.hash === "#prompts")
+      document.getElementById("prompts")?.scrollIntoView();
+  }, [loading, location.hash]);
   const [failed, setFailed] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,8 +48,10 @@ export default function Settings({
     Promise.all([
       api<Record<string, string>>("/config"),
       api<ProviderOption[]>("/providers"),
+      api<Record<string, string>>("/prompts"),
     ])
-      .then(([value, catalog]) => {
+      .then(([value, catalog, defaults]) => {
+        setPrompts(defaults);
         setProviders(catalog);
         setConfig(value);
         setSnapshot(JSON.stringify(value));
@@ -119,6 +127,7 @@ export default function Settings({
     setBusy(true);
     try {
       const saved = await chrome.storage.local.get([
+        "captureMode",
         "recoveryTranscript",
         "recoveryMeetingId",
         "isRecording",
@@ -130,6 +139,15 @@ export default function Settings({
       }
       if (!saved.recoveryMeetingId) {
         setMessage(t("noRecovery"));
+        return;
+      }
+      if (saved.captureMode === "native") {
+        const result = await chrome.runtime.sendMessage({
+          type: "RECOVER_NATIVE_RECORDING",
+        });
+        if (!result?.ok)
+          throw new Error(result?.error || "Could not recover recording");
+        setMessage(t("recovered"));
         return;
       }
       const form = new FormData();
@@ -376,7 +394,63 @@ export default function Settings({
               </section>
             )}
             {!setup && (
-              <section className="panel settings-panel stack">
+              <section id="prompts" className="panel settings-panel stack">
+                <h2>{t("editPrompts")}</h2>
+                <p>{t("promptsHelp")}</p>
+                {Object.entries(prompts).map(([key, fallback]) => (
+                  <details key={key} className="prompt-editor">
+                    <summary>
+                      {t(key === "executive_brief" ? "brief" : key)}
+                    </summary>
+                    <label className="stack">
+                      {t("promptInstructions")}
+                      <textarea
+                        rows={7}
+                        maxLength={12000}
+                        value={config[key + "_prompt_template"] || fallback}
+                        onChange={(e) =>
+                          update(key + "_prompt_template", e.target.value)
+                        }
+                      />
+                    </label>
+                    <Button
+                      variant="ghost"
+                      onClick={() => update(key + "_prompt_template", "")}
+                    >
+                      {t("resetPrompt")}
+                    </Button>
+                  </details>
+                ))}
+              </section>
+            )}
+            {!setup && (
+              <details className="panel settings-panel stack">
+                <summary>{t("advancedSettings")}</summary>
+                <label className="stack">
+                  {t("speechModel")}
+                  <select
+                    value={config.transcription_model}
+                    onChange={(e) =>
+                      update("transcription_model", e.target.value)
+                    }
+                  >
+                    {[
+                      ...new Set([
+                        config.transcription_model,
+                        "tiny",
+                        "base",
+                        "small",
+                        "medium",
+                        "large-v3",
+                      ]),
+                    ].map((model) => (
+                      <option key={model} value={model}>
+                        {model}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="muted">{t("speechModelHelp")}</span>
+                </label>
                 <div className="settings-panel-header">
                   <span className="section-icon">
                     <Icon name="refresh" />
@@ -390,7 +464,7 @@ export default function Settings({
                 <Button disabled={busy} variant="secondary" onClick={recover}>
                   {t("recover")}
                 </Button>
-              </section>
+              </details>
             )}
           </fieldset>
 

@@ -113,3 +113,36 @@ artifacts/
 !.agents/skills/graphify/
 !AGENTS.md
 graphify-out/
+
+# Local browser sessions and automation output
+.browser-profiles/
+.playwright/
+playwright-report/
+test-results/
+blob-report/
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+
+# Recorder recovery data and native-host installation files
+recordings/
+watchnt-host.cmd
+com.watchnt.recorder.json
+
+# Local agent state and private credentials
+.codex/
+.claude/
+*.p12
+*.pfx
+credentials.json
+secrets.json
+
+# SQLite sidecars and transient file writes
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+*.tmp

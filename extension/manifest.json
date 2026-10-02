@@ -33,6 +33,19 @@
         "*://teams.live.com/*"
       ],
       "js": [
+        "meeting-audio.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "*://meet.google.com/*",
+        "*://*.zoom.us/wc/*",
+        "*://teams.microsoft.com/*",
+        "*://teams.live.com/*"
+      ],
+      "js": [
         "src/content/index.tsx"
       ]
     }
@@ -40,10 +53,12 @@
   "permissions": [
     "storage",
     "activeTab",
-    "tabCapture",
+    "tabs",
     "scripting",
     "offscreen",
-    "alarms"
+    "alarms",
+    "nativeMessaging",
+    "tabCapture"
   ],
   "host_permissions": [
     "http://localhost:8000/*"

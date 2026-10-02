@@ -5,6 +5,7 @@ const paths = {
   actions: "M9 5h11 M9 12h11 M9 19h11 M3 5h.01 M3 12h.01 M3 19h.01",
   settings:
     "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2",
+  gear: "m10 2 4 0 .7 3 2.6 1.5 3-.9 2 3.4-2.2 2.1v3l2.2 2.1-2 3.4-3-.9-2.6 1.5-.7 3h-4l-.7-3-2.6-1.5-3 .9-2-3.4 2.2-2.1v-3L1.7 9 3.7 5.6l3 .9L9.3 5z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6",
   mic: "M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0z M5 10v2a7 7 0 0 0 14 0v-2 M12 19v3 M8 22h8",
   shield: "m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z m-4 9 3 3 5-6",
   search: "M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16 m6 14 5 5",
@@ -60,11 +61,8 @@ export function Icon({
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <span className="brand">
-      <span className="brand-mark" aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <i />
+      <span className="brand-logo-frame" aria-hidden="true">
+        <img className="brand-logo" src="/logo.jpg" alt="" />
       </span>
       {!compact && (
         <span>

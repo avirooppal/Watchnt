@@ -12,7 +12,6 @@ export default function Popup() {
     { online, check } = useEngineStatus();
   const [supported, setSupported] = useState(false),
     [pending, setPending] = useState(false),
-    [mode, setMode] = useState("audio"),
     [error, setError] = useState("");
   const content = useRef<HTMLElement>(null);
   const timer = useRecordingTime(state.isRecording, state.recordingStartTime);
@@ -32,7 +31,7 @@ export default function Popup() {
       await chrome.runtime.sendMessage(
         stop
           ? { type: "STOP_RECORDING" }
-          : { type: "START_RECORDING_WITH_STREAM", payload: { mode } },
+          : { type: "START_RECORDING_WITH_STREAM" },
       );
     } catch (e) {
       setError(String(e));
@@ -41,10 +40,15 @@ export default function Popup() {
     }
   }
   const terminal =
+    !state.isStarting &&
     !state.isRecording &&
     !state.isUploading &&
     !!state.currentMeetingId &&
     ["COMPLETED", "FAILED"].includes(state.pipelineStatus || "");
+  const dismissed =
+    terminal &&
+    state.pipelineStatus === "COMPLETED" &&
+    state.dismissedCaptureId === state.currentMeetingId;
   useEffect(() => {
     if (state.currentMeetingId && !state.isRecording)
       void chrome.runtime.sendMessage({
@@ -52,7 +56,7 @@ export default function Popup() {
         payload: { meetingId: state.currentMeetingId },
       });
   }, [state.currentMeetingId, state.isRecording]);
-  const active = state.isRecording || state.isUploading;
+  const active = state.isStarting || state.isRecording || state.isUploading;
   useEffect(() => {
     if (terminal && content.current) content.current.scrollTop = 0;
   }, [terminal]);
@@ -62,38 +66,46 @@ export default function Popup() {
         <Brand />
         <Button
           variant="ghost"
-          className="icon-button"
+          className="popup-settings"
           aria-label={t("settings")}
+          title={t("settings")}
           onClick={() =>
             chrome.tabs.create({
               url: chrome.runtime.getURL("dashboard.html#/settings"),
             })
           }
         >
-          <Icon name="settings" size={19} />
+          <Icon name="gear" size={18} />
+          {t("settings")}
         </Button>
       </header>
       <main className="popup-main" ref={content}>
         <div className={`capture-hero ${active ? "is-active" : ""}`}>
-          <div className="capture-emblem">
-            <Icon name={state.isUploading ? "sparkle" : "mic"} size={30} />
-            {state.isRecording && <span className="live-beacon" />}
-          </div>
-
-          <h1>
+          <h1 aria-live="polite">
             {t(
-              state.isRecording
-                ? "recording"
-                : state.isUploading
-                  ? "savingCapture"
-                  : terminal
-                    ? state.pipelineStatus === "FAILED"
-                      ? "captureFailed"
-                      : "captureSaved"
-                    : "ready",
+              state.isStarting
+                ? "starting"
+                : state.isRecording
+                  ? "recording"
+                  : state.isUploading
+                    ? state.pipelineStatus === "TRANSCRIBING" ||
+                      state.pipelineStatus === "UPLOADING"
+                      ? "savingCapture"
+                      : "preparingNotes"
+                    : terminal && !dismissed
+                      ? state.pipelineStatus === "FAILED"
+                        ? "captureFailed"
+                        : "captureSaved"
+                      : supported
+                        ? "ready"
+                        : "meetingRequired",
             )}
           </h1>
-          {state.isUploading && <p>{t("stopHint")}</p>}
+          {!active && (!terminal || dismissed) && (
+            <p id="capture-description">
+              {t(supported ? "captureEverything" : "openMeetingHint")}
+            </p>
+          )}
           {state.isRecording && (
             <div className="recording-timer">
               {timer}
@@ -101,27 +113,28 @@ export default function Popup() {
             </div>
           )}
         </div>
-        <div className="connection-row">
-          <span>
-            <Icon name="monitor" size={17} />
-            {t("engine")}
-          </span>
-          <span
-            className={`engine-state ${online === null ? "connecting" : online ? "online" : "offline"}`}
-            role="status"
-          >
-            <span className="status-dot" />
-            {t(online === null ? "connecting" : online ? "online" : "offline")}
-          </span>
-        </div>
         {(error || state.captureError) && !terminal && (
           <Notice kind="error">{error || state.captureError}</Notice>
         )}
-        {state.isRecording && state.captureWarning && (
-          <Notice>{state.captureWarning}</Notice>
-        )}
-        {!state.isRecording && state.currentMeetingId && (
-          <section className="popup-preview">
+        {(state.isRecording || (terminal && !dismissed)) &&
+          state.captureWarning && <Notice>{state.captureWarning}</Notice>}
+        {!state.isRecording && state.currentMeetingId && !dismissed && (
+          <section className="popup-preview popup-result">
+            {state.pipelineStatus === "COMPLETED" && !state.isUploading && (
+              <Button
+                variant="ghost"
+                className="icon-button popup-dismiss"
+                aria-label={t("dismissNotification")}
+                title={t("dismissNotification")}
+                onClick={() =>
+                  void chrome.storage.local.set({
+                    dismissedCaptureId: state.currentMeetingId,
+                  })
+                }
+              >
+                <Icon name="close" size={17} />
+              </Button>
+            )}
             {state.pipelineStatus === "FAILED" && (
               <p className="popup-error" role="alert">
                 {error || state.captureError || t("processingFailedHelp")}
@@ -163,59 +176,13 @@ export default function Popup() {
             )}
           </section>
         )}
-        {!active && (
-          <fieldset className="capture-modes">
-            <legend>{t("captureMode")}</legend>
-            <div className="mode-grid">
-              {(["audio", "captions"] as const).map((value) => (
-                <label
-                  key={value}
-                  className={`mode-option ${mode === value ? "selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="capture-mode"
-                    value={value}
-                    checked={mode === value}
-                    onChange={() => setMode(value)}
-                  />
-                  <Icon
-                    name={value === "audio" ? "mic" : "transcript"}
-                    size={19}
-                  />
-                  <span>{t(value)}</span>
-                  <Icon name="check" size={14} />
-                </label>
-              ))}
-            </div>
-            <p className="field-hint">
-              {t(mode === "audio" ? "recordingSource" : "captionHelp")}
-            </p>
-          </fieldset>
-        )}
-        {active && (
-          <section className="popup-preview">
-            <div className="row between">
-              <span className="eyebrow">{t("livePreview")}</span>
-              <span className="live-label">
-                {state.isRecording ? (
-                  <>
-                    <span className="status-dot" />
-                    {t("recording")}
-                  </>
-                ) : (
-                  t("processing")
-                )}
-              </span>
-            </div>
+        {state.isRecording && (
+          <details className="popup-preview popup-live-preview">
+            <summary>
+              {t("livePreview")} <Icon name="chevron" size={15} />
+            </summary>
             <p dir="auto">{state.liveTranscript || t("noPreview")}</p>
-          </section>
-        )}
-        {!active && !supported && (
-          <p className="capture-hint">
-            <Icon name="library" size={17} />
-            {t("openMeetingHint")}
-          </p>
+          </details>
         )}
         {online === false && !active && (
           <Notice
@@ -226,7 +193,7 @@ export default function Popup() {
               </Button>
             }
           >
-            {t("engineOfflineHint")}
+            {t("captureUnavailable")}
           </Notice>
         )}
         {state.isUploading ? (
@@ -237,15 +204,23 @@ export default function Popup() {
         ) : (
           <Button
             className="capture-primary"
+            aria-describedby={
+              !active && (!terminal || dismissed)
+                ? "capture-description"
+                : undefined
+            }
             variant={state.isRecording ? "danger" : "primary"}
             size="lg"
-            isLoading={pending}
-            disabled={!state.isRecording && (!online || !supported)}
+            isLoading={pending || state.isStarting}
+            disabled={
+              !!state.isStarting ||
+              (!state.isRecording && (!online || !supported))
+            }
             onClick={() => capture(!!state.isRecording)}
           >
             <Icon name={state.isRecording ? "stop" : "mic"} size={19} />
             {t(
-              pending && !state.isRecording
+              (pending || state.isStarting) && !state.isRecording
                 ? "starting"
                 : state.isRecording
                   ? "stop"

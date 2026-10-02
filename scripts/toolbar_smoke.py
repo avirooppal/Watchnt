@@ -19,6 +19,8 @@ with TemporaryDirectory() as profile, sync_playwright() as pw:
     time.sleep(.15)
    raise AssertionError((expected,badge()))
   wait_badge('!')
+  page.wait_for_timeout(1200)
+  assert page.locator('#watchnt-reminder').count()==0
   assert page.locator('#watchnt-bot-root').count()==0
   colors=set()
   for _ in range(8):
@@ -26,6 +28,7 @@ with TemporaryDirectory() as profile, sync_playwright() as pw:
   assert len(colors)==2,colors
   worker.evaluate('chrome.storage.local.set({isRecording:true})')
   wait_badge('REC')
+  assert page.locator('#watchnt-reminder').count()==0
   assert 'Recording' in worker.evaluate('chrome.action.getTitle({})')
   colors=set()
   for _ in range(8):
@@ -37,5 +40,18 @@ with TemporaryDirectory() as profile, sync_playwright() as pw:
   wait_badge('!')
   page.get_by_role('button',name='Leave').evaluate('(e)=>e.remove()')
   wait_badge('')
-  print('PASS: no overlay; blinking amber reminder, blinking red recording, processing and call-end reset')
+  errors=[]
+  page.on('pageerror',lambda error:errors.append(str(error)))
+  page.reload()
+  page.evaluate('''() => { const button=document.createElement('button'); button.setAttribute('aria-label','Leave call'); document.body.append(button); }''')
+  page.wait_for_timeout(1200)
+  assert page.locator('#watchnt-reminder').count()==0
+  try: worker.evaluate('chrome.runtime.reload()')
+  except Exception as error:
+   if 'closed' not in str(error) and 'destroyed' not in str(error): raise
+  page.wait_for_function("!document.getElementById('watchnt-reminder')")
+  page.wait_for_timeout(2200)
+  assert not errors,errors
+  print('PASS: actual extension reload stays free of reminders with no uncaught content-script errors')
+  print('PASS: meeting has no reminder overlay, toolbar recording state, processing and call-end reset')
  finally:context.close()
